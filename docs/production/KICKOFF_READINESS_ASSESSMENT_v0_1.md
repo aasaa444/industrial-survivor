@@ -48,8 +48,27 @@
 | 6 | **QA 验收计划** | 🔶 **部分满足** | Gate 0-6 结构与证据字段模板已就绪（Charter §10）+ R01-R10 静态一致性 pass；但实现关联的 QA 验收计划（fixture/seed/trace 观察、Gate 2 判据）`not_run / not_ready`，未定稿 | 定稿实现验收计划：命名 fixture、Gate 2 判据、QA 独立观察路线；QA 证据字段审计 | Independent QA + Tech Lead |
 | 7 | **write ownership** | 🔶 **部分满足** | 治理/设计/文档级 write ownership 明确，各 owner 存在；**实现级 write ownership（Engineer 代码/资源/GDMCP mutation）未指派** | 实现授权后为每个 Godot mutation/artifact 指派唯一 owner，并记录 | Producer |
 | 8 | **stop conditions** | 🟢 **已满足** | Charter §2.3/§8/§9 + 各 ADR/合同 stop conditions 完备：scope drift、非确定、遮蔽、stale input、候选硬化、证据缺失、平台漂移均定义返回/停止路径 | 无缺口；实现授权后按既定 stop conditions 执行 | 各 role |
+| 9 | **版本控制就绪** | 🟢 **已满足**（本轮补建） | 本地 git 仓库已建立（root commit `0778dd6`，2026-08-16，Toolchain Engineer 执行，见 `GIT_INIT_REPORT_v0_1.md`）；`.gitignore` 覆盖 `.godot/` 缓存与 gdmcp 二进制；未配置远程。**隐含依赖：ADR-TECH-03（可复现性）/ADR-TECH-08（build identity）的 source revision 证据载体**。版本控制作为实现授权/kickoff 前置，**后续项目默认前置** | 无缺口；后续项目应在实现授权/kickoff 之前使版本控制就绪（授权前 init 仓库 + .gitignore 与验收前提交策略） | Toolchain Engineer / Producer |
 
 **图例：** 🟢 已满足 = 条件在静态层已成立且实现后可执行；🔶 部分满足 = 有架构/模板/结构但关键件未冻结或未分派；🔴 未满足 = 该条件目前未达成，构成 kickoff 前置缺口。
+
+---
+
+## 2.5 版本控制教训与前置条件（2026-08-16 补记）
+
+> **补记类别：** 本轮周复查教训（lesson）+ 前置条件扩展，供后续项目复用。非授权、非 kickoff pass、非合同批准、非验收。
+
+### 2.5.1 教训记录
+
+- **版本控制应列为实现授权 / kickoff 的前置条件之一**（与 §2 前置条件核对表中的 GDMCP 路径等请求同级），并应在**实现授权之前就绪**。
+- **隐含依赖：** 已批准的契约 **ADR-TECH-03（可复现性）** 与 **ADR-TECH-08（build identity）** 的证据字段依赖 **source revision** —— 没有版本控制，这些证据字段无载体（无法引用 commit/revision 作为可复现与构建身份的锚点）。
+- **本轮实际缺口：** 本项目在实现授权后才补建 git（**2026-08-16**，Toolchain Engineer 执行：`git init` + root commit `0778dd6`；`.gitignore` 忽略 `.godot/` 缓存与 gdmcp 二进制，未配置远程）。补建细节与验证见 `GIT_INIT_REPORT_v0_1.md`。
+- **复用要点：** 后续项目应在实现授权 / kickoff 之前完成版本控制就绪（init 仓库 + `.gitignore` 规则 + 验收前提交/修订策略），使 source revision 自实现起点即可承载 ADR-TECH-03/08 证据。
+
+### 2.5.2 前置条件清单更新
+
+- 已在 §2 核对表**第 9 项「版本控制就绪」**补记（🟢 已满足——本轮补建完成）。
+- **状态标注：** 🟢 已满足（本轮补建）；**后续项目默认前置**（纳入实现授权/kickoff 前置条件清单，与 GDMCP 路径等请求同级）。
 
 ---
 
@@ -62,6 +81,7 @@
 5. **Write ownership（实现级）未定。** 治理/设计文档 owner 均明确；但代码/场景/资源/GDMCP mutation 的写入 owner 尚未指派（须随实现 owner 一并任命）。
 6. **UX 观察目标在途（次要缺口）。** `UX_OBSERVATION_TARGETS_CR001_v0_1.md` 由父协调器并行派发，本评估读取集内未达。将构成 UX-03..13 观察目标与 Gate 3 输入的一部分；未达时相关契约评审以在途处理。
 7. **候选预算全部仅候选（非缺口，属纪律保留）。** 六项性能候选 + `1280×720` 红线均仅候选（R04/DC-PERF-01 Option A），测量后须新 CR + 用户批准才可硬门槛化；本评估不涉及数值。
+8. **版本控制（原缺口 → 本轮已补齐）。** 版本控制原未列为本评估前置条件列表项；但作为 ADR-TECH-03/08 的 source revision 载体，它是实现授权隐含前置。**2026-08-16 已补建**（Toolchain Engineer，root commit `0778dd6`，见 `GIT_INIT_REPORT_v0_1.md`），并已在本文件 §2.5 补记教训 + 纳入第 9 项前置（🟢 已满足）。后续项目需在授权前就绪（见 §2.5）。
 
 ---
 
@@ -86,7 +106,7 @@
 
 | 满足度 | 项数 | 项 |
 |---|---|---|
-| 🟢 已满足 | 1 | stop conditions |
+| 🟢 已满足 | 2 | stop conditions · 版本控制就绪（本轮补建，2026-08-16，见 §2.5） |
 | 🔶 部分满足 | 3 | 产品/设计 gate · seam/ownership 决策 · QA 验收计划 |
 | 🔴 未满足 | 4 | 技术 ADR/合同批准 · 实现 owner · GDMCP 路径 · 实现级 write ownership |
 
@@ -109,10 +129,12 @@
 7. `docs/ux/KICKOFF_UX_UI_CONTRACTS_v0_1.md`（§1-§2.1，确认 `NOT APPROVED`）
 8. `docs/creative/KICKOFF_SYSTEMS_RULES_CONTRACTS_v0_1.md`（§1-§3.1，确认 `NOT APPROVED`）
 9. `UX_OBSERVATION_TARGETS_CR001_v0_1.md` —— **读取尝试返回 not found**（在途未达，标注为在途缺口）
+10. `docs/production/GIT_INIT_REPORT_v0_1.md`（全 125 行，2026-08-16 补记版新增引用依据）
 
 ## 8. 版本与变更记录
 
 - **v0.1（本文件）:** Executive Producer / Lead Producer 唯一新增评估报告；前置条件核对表 + 缺口分析 + 建议 + 明确边界声明；未修改任何既有文档。
+- **v0.1-补记（2026-08-16，sole owner 原位追加）:** 新增 §2.5「版本控制教训与前置条件」；§2 核对表补第 9 项「版本控制就绪」（🟢 已满足——本轮补建）；§3 缺口分析补第 8 项（原缺口 → 已补齐）；§5 满足度汇总更新（🟢 由 1 → 2）；§7 Evidence 新增 `GIT_INIT_REPORT_v0_1.md`。**未改动任何既有前置/缺口/状态行语义**（仅附录版本控制项）；未修改任何其它文档。
 
 ## Closure
 

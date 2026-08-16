@@ -1,8 +1,10 @@
-# PROPOSALS CR-002 / CR-004 / CR-005 v0.1 — 距离度量·失效时机·no-target 形态提案合集
+# PROPOSALS CR-002 / CR-004 / CR-005 v0.2 — 距离度量·失效时机·no-target 形态提案合集
 
-> **Status:** `PROPOSAL / TEAM_PROPOSAL / DRAFT / NOT APPROVED / DEVELOPMENT NOT STARTED`
+> **Status:** `PROPOSAL / TEAM_PROPOSAL / DRAFT / NOT APPROVED / DEVELOPMENT NOT STARTED`（本 v0.2 仅作 cr-004 §3.4 推荐同步，属性不变）
 >
 > **Lifecycle:** `development governance / kickoff readiness preparation`；implementation 仍 `NOT_AUTHORIZED`。
+>
+> **⚠️ 失效语义终裁注记（文件级）:** cr-004 的失效语义 (i)/(ii) 已由 **`SEMANTICS_INVALIDATION_FINAL_v0_1.md`（2026-08-16，Systems 唯一裁定书）终裁为 (ii)**：「移除即失效 ⇒ 无命中，落点在命名 drain 点；锁定 = 固定 ID 集 + 不重定位；锁定 ≠ 保证命中」。本提案 **v0.1 → v0.2** 仅作为 `absorb_within_authority` 路径内的**提案推荐同步**：将 cr-004 §3.4 推荐自 (i) 改为 (ii)，并同步 §3.6 QA 衔接行，使提案推荐与规则 6 / QA 判据 / 实现 / 终裁书四方一致（终裁书 §6 动作 1）。本修订不触碰产品承诺、不批准/冻结任何 ADR、不豁免 QA。
 >
 > **Artifact:** Systems / Rules Designer 依已决 cr-001 (`DC-SYS-01 → Option A`，R09) 产出的 **cr-002 / cr-004 / cr-005** 三份 `absorb_within_authority` 提案合集（团队提案级）。
 >
@@ -29,7 +31,7 @@
 
 ### 0.3 写入边界与唯一产物
 
-- 本合集是本次任务**唯一写入的新文件**：`docs/production/PROPOSALS_CR002_004_005_v0_1.md`。未修改任何既有文档（Systems 合同、CR 台账、Tech/UX 输入、Charter、ADR、证据 index 等一律未触碰）。
+- 本次修订的唯一写入产物 = **本文件原位修订**：`docs/production/PROPOSALS_CR002_004_005_v0_1.md`（v0.1 → v0.2），仅改 cr-004 相关行（§3.4 推荐 (i)→(ii) 及 §3.6 对齐）。未修改任何其它文档（终裁书、QA 计划、实现报告、CR 台账、Systems 合同、Tech/UX 输入、Charter、ADR、证据 index 等一律未触碰）；cr-002（M-1）与 cr-005（quiet cycle）内容保持不变。
 - 禁止调用 `subagent` / `subagent_fork` / `workflow` 或任何嵌套派发——本会话未调用任何此类接口。
 
 ---
@@ -168,14 +170,16 @@
 
 ### 3.4 二选一语义（Systems 语义建议，须与 Tech 机制一致、全 run 唯一）
 
+> **⚠️ 终裁对齐（v0.2）:** 本小节推荐已由 `SEMANTICS_INVALIDATION_FINAL_v0_1.md`（2026-08-16，Systems 唯一裁定书）**终裁为 (ii)**。下列表格与建议段落据此同步；(i) 仅保留作对照候选，不再作为推荐。
+
 | 选项 | 描述 | Systems 语义建议 | 一致性要求 |
 |---|---|---|---|
-| **(i) 快照完全权威** | 解析只依锁定时刻合法性标记——飞行中失效在快照解析中对**本 shot 不可见**（该 ID 仍按锁定时刻命中；失效在下一 shot 生效） | **本提案推荐 (i)**：最贴合「lock 不可变快照」的语义；飞行中不重定位/不改变，与 revision-02 #4「lock that shot's target snapshot」字面一致；确定性最强（fixture 期望值=「按锁定时刻 hit 与否」）。 | 全 run 唯一选择、trace 记录 `resolution_outcome`；与 Tech 二选一机制一致（TC-INPUT §2.4）。 |
-| **(ii) 确定性合法性谓词** | 解析对快照 ID 重新评估确定性合法性谓词——移除即失效（与「移除目标不得命中」字面更贴合） | 更贴近「移除即失效」字面边界，但把失效判定推进到解析时刻（飞行中不可见但**解析时可变**）——与「lock 不可变」张力略增；可读性（G2/G3）与确定性仍需 fixture 验证。 | 若选 (ii)，其合法性谓词**必须是确定性的纯函数**（不读容器顺序/墙钟），并同样全 run 唯一 + trace。 |
+| **(i) 快照完全权威** | 解析只依锁定时刻合法性标记——飞行中失效在快照解析中对**本 shot 不可见**（该 ID 仍按锁定时刻命中；失效在下一 shot 生效） | **不再推荐（v0.2）**：字面与本 shot 命中「已失效目标」与规则 6「excluded from later resolution」冲突；若按字面采 (i) 会生成 S2 幽灵命中 / G4 幻影期待，且与 QA 判据与实现不一致。仅保留作对照候选。 | 若历史评审回看 (i)，须以规则 6 为准重议；本提案以终裁 (ii) 为推荐。 |
+| **(ii) 确定性合法性谓词** | 解析对快照 ID 重新评估确定性合法性谓词——移除即失效（与「移除目标不得命中」字面贴合） | **本提案推荐 (ii)（v0.2，终裁对齐）**：移除即失效 ⇒ 无命中，落点在命名 drain 点；合法性谓词为确定性纯函数（不读容器顺序/墙钟/不重定位）。快照 ID 集保持不可变、解析只读不重定位——与「锁定 = 固定 ID 集 + 不重定位；锁定 ≠ 保证命中」完全一致。 | 谓词**必须是确定性纯函数**并全 run 唯一 + trace；`TARGET-removal` 期望事实「X 无命中；`invalidation_event` 带 tick；快照 ID 集不变」成为精确可断言面（零容差可测，G1）。 |
 
-**Systems 语义建议：采用 (i) 快照完全权威。**
-- **一句理由:** 它把「锁定」落实为真正不可变（解析只读快照、不连续重定位、飞行中对本 shot 不可见任何失效），与 revision-02 #4 的 lock 语义与决策 #3「fix this shot's targets after firing」字面最一致，确定性最强；「移除目标不得命中」由 (i) 在**下一 shot 的 pre-fire 刷新**自然实现（失效实体不再进入候选集）。S2（无幽灵命中）在 (i) 下由「快照内合法 ID → hit_results；失效在下一次 refresh 被踢出」实现。
-- **异议（如实）:** 若未来观察显示 (i) 造成「锁定后目标已死/已移除仍被本发假命中」的可读性错位（G3 mismatch），须经新 CR/用户评估切 (ii)，而非静默改；此监督点用 `TARGET-removal` fixture + QA 观察验证。
+**Systems 语义建议：采用 (ii) 确定性合法性谓词（终裁对齐，源自 SEMANTICS_INVALIDATION_FINAL_v0_1）。**
+- **一句理由（与终裁 §3 一致）:** (ii) 字面满足 Systems §5.1 规则 6「Removed/invalid targets must be excluded from later resolution」——每次开火在命名 drain 点（解析子步起点）排空显式失效事件；已锁定的本 shot 快照 **ID 集不可变**、解析**只读**、绝不回查 live 实体、绝不连续重定位（决策 #3 / revision-02 #4 的「锁定」原样保留）；任何在解析前已被 `invalidation_event(id, tick)` 声明的目标本 shot 不产生命中、不伪造命中，失效自下一 shot 的 pre-fire 刷新被踢出候选集而自然生效。即：`锁定 ≠ 保证命中；锁定 = 固定 ID 集 + 不重定位；移除即失效 ⇒ 无命中`。S2（无幽灵命中）与 G4（无幻影期待）由此成立，G2/G3 归因更诚实（玩家不会把「打了空气」记成命中，也不把已死/已移目标记为本发命中）；drain 点输入集固定 → 确定性纯函数 → G1 可测。
+- **异议（如实）:** 决策 #3 的「post-fire 固定目标」与 revision-02 #4「lock that shot's target snapshot」确认的是**快照 ID 集的固定与不重定位**，**不是**「对已移除目标的命中保证」；(ii) 完整保留锁定、唯一新增「命中只作用于解析前未被显式失效的锁定 ID」，不触碰任何锁定承诺——故采纳 (ii) **不触发升级路径**（终裁 §5 逐项核查未接触承诺/键序）。若未来观察到「解析时判定」的实现滑向非确定（读容器顺序/墙钟）→ 由 `TARGET-removal` fixture + QA Gate 2 独立验证，而非静默改规则。
 
 > **注:** 无论选 (i) 还是 (ii)，都必须是**全 run 一致的唯一选择**并在每份 trace 记录 `resolution_outcome`（TC-INPUT §2.4 / ADR-TECH-04）；本提案不做实现，只在语义层给 Tech 一个可冻结输入。
 
@@ -199,8 +203,8 @@
 - **进度:** 解锁 `TARGET-removal` / `TARGET-out-of-bound` 相关 fixture；最小确定性核心 seam 失效语义可收敛。
 - **风险 / 回滚:** 失效语义一旦由 Systems 定死，改动成本主要在 fixture 重述（TC-INPUT R4，中）；回滚 = 撤快照/失效语义 + fixture。
 - **Ledger 行:** 本件主要定义**事件排序与语义**（非数值）；若引入任何阈值/时长 → 走 PRECHARTER-04（range+starting_point；promotion_authority=User）。
-- **Fixture 衔接（TARGET-*）:** `TARGET-removal`（锁定含 ID X；解析前 X 被移除 → X 无命中、`invalidation_event` 带 tick、快照 ID 集不变）；联动 `TARGET-no-target`（若失效使候选集变空 → no-target 分支）。
-- **QA 衔接:** Gate 2 仍 `not_run / not_ready`；removal fixture 精确期望值 + seed 复现 + QA 独立观察（B3 证据完整性）。
+- **Fixture 衔接（TARGET-*）:** `TARGET-removal`（锁定含 ID X；解析前 X 被移除 → X 无命中、`invalidation_event` 带 tick、快照 ID 集不变）——**与终裁 (ii) 一致**：X 仍在锁定快照 ID 集内，仅结算无命中（`resolution_outcome = no-hit-invalid`）；联动 `TARGET-no-target`（若失效使候选集变空 → no-target 分支）。
+- **QA 衔接:** Gate 2 仍 `not_run / not_ready`；removal fixture 精确期望值 + seed 复现 + QA 独立观察（B3 证据完整性）。`TARGET-removal` 期望事实（QA_ACCEPTANCE_PLAN §3.4：X 无命中、`invalidation_event` 带 tick、快照 ID 集不变）即 (ii) 终裁的可执行判据引用；命中 outcome 记 `no-hit-invalid`（Trace 字段 §3.5）。
 
 ---
 
@@ -264,9 +268,9 @@
 ### 5.1 分层声明
 
 - **`user_confirmed`（仅引用，不新增）:** 22 项原始决策（含 #3 pre-fire 刷新+锁定、#6 独立弧计数、#15–16 hint、#18–19 可读性/可访问性边界）；revision-02 #4（refresh→stable-sort→lock）；PRECHARTER-02 / -04；cr-001（Option A，R09 决策引用）；DC-PLAT-01/02、DC-ARCH-01、DC-PERF-01、DC-ACC-02、DC-REL-01、DC-PLAY-01（R01–R08 决策引用）；AUTH-01。本合集不重写、不重分类任何一项。
-- **`team_proposal`（本合集全部实质建议）:** cr-002 的 M-1 距离度量 / 量化桶 / tie-break 形态；cr-004 的命名 drain 点事件排序 / 二选一语义 (i) 推荐 / trace 字段；cr-005 的 quiet cycle 形态 / 反馈类与 hit_results 绑定 / S1–S3 落实。全部需评审 + 证据，未获批准。
+- **`team_proposal`（本合集全部实质建议）:** cr-002 的 M-1 距离度量 / 量化桶 / tie-break 形态；cr-004 的命名 drain 点事件排序 / 二选一语义 **(ii) 推荐（v0.2，终裁对齐）** / trace 字段；cr-005 的 quiet cycle 形态 / 反馈类与 hit_results 绑定 / S1–S3 落实。全部需评审 + 证据，未获批准。
 - **`assumption`:** 确定性排序保持可读（G1/G3 期望需观察）；玩家可感知 clufe 中心 / 两级键；quiet cycle 不损害自动攻击可见性；失效 drain 点可 headless 实现。均需未来观察，未观察前不成立。
-- **`unresolved`（全量保留，未关闭）:** cluster members / metric 数值与单位 / quantization 桶宽精确值 / tie-break 可读性语义 / stable-ID 生命周期细节 / invalidation 精确时机与 drain 实现 / no-target cycle 精确周期 / B2 弧序 / tick 频率——**cr-002 / cr-004 / cr-005 均保持 `unresolved`**（absorb 路径进行中），直至证据 + 评审。本合集未把任何一项升级。
+- **`unresolved`（全量保留，未关闭）:** cluster members / metric 数值与单位 / quantization 桶宽精确值 / tie-break 可读性语义 / stable-ID 生命周期细节 / invalidation **drain 实现细节** / no-target cycle 精确周期 / B2 弧序 / tick 频率——**cr-002 / cr-004 / cr-005 均保持 `unresolved`**（absorb 路径进行中），直至证据 + 评审。本合集未把任何一项升级。（注 v0.2：失效语义的 **(i)/(ii) 二选一本身**已由 `SEMANTICS_INVALIDATION_FINAL_v0_1.md` 终裁决为 (ii)，本提案推荐随之对齐；但 invalidation 的**命名 drain 点实现细节**与其余 unresolved 项仍保留，未闭合。）
 
 ### 5.2 不变量保留声明
 
@@ -280,11 +284,11 @@
 
 ## 6. 边界声明与 Closure
 
-- **未选择规则语义:** 本合集推荐 M-1 / (i) / quiet cycle，但最终规则裁决归 User（cr-002/004/005 仍 unresolved 呈交评审）。
+- **未选择规则语义（最终裁决归 User）:** 本合集推荐 M-1 / **(ii)（cr-004，终裁对齐，见 §3.4）** / quiet cycle；cr-002/004/005 仍 unresolved 呈交评审。失效语义 (i)/(ii) 二选一已由 `SEMANTICS_INVALIDATION_FINAL_v0_1.md` 终裁为 (ii)，本提案推荐同步，最终规则裁决仍归 User。
 - **未批准/冻结任何合同或 ADR:** Tech/Systems/UX 合同与 ADR-TECH-04/06 均保持 `PROPOSAL / DRAFT / NOT APPROVED`；本合集是语义提案输入，不写死实现。
 - **未豁免 QA blocker / 未替 Independent QA 下 verdict:** Gate 2 仍 `not_run / not_ready`；QA 独立观察。
 - **未触碰 Godot / 运行时:** 未访问/修改 Godot、代码、场景、资源；未运行、构建、测试、导出、发布；无 runtime/视觉/性能/QA 证据。
-- **写入面:** 仅新增 `docs/production/PROPOSALS_CR002_004_005_v0_1.md`，未修改任何既有文档。
+- **写入面:** 本文件为本次修订的**唯一写入产物**（原位修订，v0.1 → v0.2）。未修改任何其它文档（终裁书、QA 计划、实现报告、CR 台账、Charter、ADR 等一律未触碰）。
 - **未派发任何成员:** 未调用 `subagent` / `subagent_fork` / `workflow` / 任何嵌套派发。
 
 **Closure:** `closure_ready = yes`（仅限本静态提案合集 artifact）。不是 kickoff pass、不是实现授权、不是合同批准、不是验收 verdict。Kickoff 仍 `not_ready`；implementation 仍 `NOT_AUTHORIZED`；Gate 2–6 仍 `not_run / not_ready`。
@@ -293,4 +297,5 @@
 
 ## 7. 版本与变更记录
 
-- **v0.1（本文件）:** Systems / Rules Designer 唯一新产物；三份提案（cr-002 / cr-004 / cr-005）合集，全部 `absorb_within_authority` + PRECHARTER-04 ledger 形态；未修改任何其它文档。
+- **v0.1:** Systems / Rules Designer 唯一新产物；三份提案（cr-002 / cr-004 / cr-005）合集，全部 `absorb_within_authority` + PRECHARTER-04 ledger 形态。
+- **v0.2（本文件，2026-08-16 · cr-004 推荐同步）:** 失效语义已由 `SEMANTICS_INVALIDATION_FINAL_v0_1.md` **终裁为 (ii)**。本提案据此**原位修订**：① §3.4 推荐自 (i) 改为 **(ii)**（确定性合法性谓词 + 命名 drain 点 + 快照 ID 集不可变 + 只读解析不重定位），同步表格与「Systems 语义建议」段落为终裁语义，并标注终裁来源；② §3.6 Fixture/QA 衔接行同步对齐（`TARGET-removal` X 无命中 / `invalidation_event` 带 tick / 快照 ID 集不变 / `no-hit-invalid`）；③ 文件级注记 + §5.1/§6 相关行同步。cr-002（M-1）与 cr-005（quiet cycle）内容**保持不变**；未触碰其它文档。提案属性仍 `PROPOSAL / TEAM_PROPOSAL / DRAFT / NOT APPROVED`；cr-002/004/005 仍 `unresolved` 直至证据 + 评审。
