@@ -228,3 +228,65 @@ func test_same_geometry_same_lock_across_runs() -> void:
 	assert_array(run1["state"]["target_snapshot_ids"]).is_equal(run2["state"]["target_snapshot_ids"])
 	assert_array(run1["state"]["ordered_ids"]).is_equal(run2["state"]["ordered_ids"])
 
+
+# ============================ C4 contact seam contract tests (this unit) ============================
+# Adapter contact seam (NEXT_IMPL_UNIT_PLAN_v0_3 unit B / ADR-TECH-01):
+#   - engine overlap observation -> domain contact observations (contact_observations);
+#   - envelope carries the contact observations + candidate parameters (make_envelope);
+#   - contact feedback classes bound strictly to the rules contact events (contact_feedback_from_result):
+#       no contact feedback is fabricated when no contact event exists.
+# The adapter never judges contact legality / damage / re-arm — that stays in the rules core.
+
+# contact_observations translates engine overlap booleans into the domain contact input [{id}] (only overlapping).
+func test_contact_observations_filters_overlaps() -> void:
+	var obs: Array = ADAPTER.contact_observations([
+		{"id": 1, "overlapping": true},
+		{"id": 2, "overlapping": false},
+		{"id": 3, "overlapping": true},
+	])
+	assert_array(obs).is_equal([{"id": 1}, {"id": 3}])
+
+
+# An empty/absent overlap set translates to an empty contact observation list (contact quiet, no fabrication).
+func test_contact_observations_empty_when_no_overlap() -> void:
+	var obs: Array = ADAPTER.contact_observations([
+		{"id": 5, "overlapping": false},
+	])
+	assert_array(obs).is_empty()
+
+
+# make_envelope carries contact observations + the candidate contact parameters through the domain envelope.
+func test_make_envelope_carries_contact_input_and_params() -> void:
+	var mov: Dictionary = ADAPTER.movement_from_input({"d": true})
+	var env: Dictionary = ADAPTER.make_envelope(
+		"refresh_fire", [{"stable_id": 1}], mov, 1, [], [{"id": 2}], 30, 1)
+	assert_array(env["contact_input"]).is_equal([{"id": 2}])
+	assert_int(int(env["contact_invulnerability_ticks"])).is_equal(30)
+	assert_int(int(env["contact_damage"])).is_equal(1)
+	# The envelope always carries contact_input (empty included) so separation/re-arm is evaluated every step.
+	var env2: Dictionary = ADAPTER.make_envelope("refresh_fire", [{"stable_id": 1}], mov, 1)
+	assert_array(env2["contact_input"]).is_empty()
+
+
+# contact_feedback_from_result is bound strictly to contact domain events (no fabrication when none present).
+func test_contact_feedback_bound_to_events() -> void:
+	var res: Dictionary = {
+		"events": [
+			{"type": "contact_damage_event", "victim_id": 4, "segments_lost": 1, "tick": 10},
+			{"type": "contact_invulnerable_event", "until_tick": 40, "tick": 10},
+			{"type": "contact_rearm_event", "id": 4, "tick": 20},
+		],
+	}
+	var fb: Dictionary = ADAPTER.contact_feedback_from_result(res)
+	assert_array(fb["damage"]).is_equal([{"victim_id": 4, "segments_lost": 1}])
+	assert_bool(fb["invulnerable"]).is_true()
+	assert_array(fb["rearm"]).is_equal([4])
+
+
+# No contact event -> no contact feedback (quiet; the empty/no-contact path never fabricates damage).
+func test_contact_feedback_empty_when_no_contact_event() -> void:
+	var res: Dictionary = {"events": [{"type": "no_target_branch", "tick": 5}]}
+	var fb: Dictionary = ADAPTER.contact_feedback_from_result(res)
+	assert_array(fb["damage"]).is_empty()
+	assert_bool(fb["invulnerable"]).is_false()
+	assert_array(fb["rearm"]).is_empty()

@@ -492,3 +492,214 @@ func test_diagnostics_candidate_key_trace_and_no_kill_resolve() -> void:
 	# Invalidation/exclusion does not fabricate a kill trace entry either.
 	assert_bool(shot["state"]["hit_results"].has(9)).is_true()
 	assert_bool(shot["state"]["kill_outcomes"].is_empty()).is_true()
+# ============================ C3 CONTACT-* fixtures (this unit) ============================
+# Deterministic contact fixtures for the C2 rules-core contact extension
+# (NEXT_IMPL_UNIT_PLAN_v0_3 unit B; Systems §6.3 fixture matrix; decision #4 "one legal contact = one damage event").
+#   CONTACT-single            exactly one damage event; invulnerability entered; life segment deducted.
+#   CONTACT-overlap           persistent overlap cannot repeat damage during invulnerability; re-arm stays false.
+#   CONTACT-separate-rearm    separation re-arms; a later new overlap is exactly one NEW legal contact.
+#   CONTACT-simultaneous      two overlaps in one step -> ONE damage event (merged; invulnerability swallow);
+#                             Nx stacking is an explicit unresolved boundary reported here, not implemented.
+#   CONTACT-boundary          boundary contact: separation + recoverability (no sticky lock).
+#   CONTACT-removal           contacted victim removed during protection -> contact/rearm state cleaned; future
+#                             re-arm for a new contact is legal.
+# Zero-tolerance exact assertions (O2/B3); no floats/approx.
+# `30` invulnerability ticks mirrors the envelope candidate default as a test-local fixture input, NOT a promoted
+# rule constant (promotion_authority=User; NUMBERS NOT FROZEN).
+
+# CONTACT-single: one eligible enemy contacts once -> exactly one damage event; segments_lost=1; invulnerability entered.
+func test_contact_single_exactly_one_damage_and_invuln() -> void:
+	var st0 := RULES.empty_state()
+	var res: Dictionary = RULES.step({
+		"task": "refresh_fire",
+		"contact_input": [{"id": 3}],
+		"contact_invulnerability_ticks": 30,
+		"contact_damage": 1,
+	}, st0, 200)
+	var st: Dictionary = res["state"]
+	# Exactly one damage event, carrying the victim id and the new segments_lost.
+	var dmg := 0
+	var invuln := 0
+	for e in res["events"]:
+		if e["type"] == "contact_damage_event":
+			dmg += 1
+			assert_int(int(e["victim_id"])).is_equal(3)
+			assert_int(int(e["segments_lost"])).is_equal(1)
+		elif e["type"] == "contact_invulnerable_event":
+			invuln += 1
+			assert_int(int(e["until_tick"])).is_equal(230)
+	assert_int(dmg).is_equal(1)
+	assert_int(invuln).is_equal(1)
+	# Life deduction + invulnerability window + the victim is rearm-required.
+	assert_int(int(st["segments_lost"])).is_equal(1)
+	assert_int(int(st["contact_invulnerable_until_tick"])).is_equal(230)
+	assert_bool(st["contact_rearm"].has(3)).is_true()
+	assert_bool(st["contact_rearm"][3]).is_false()
+	# Diagnostics export the damage.
+	assert_array(res["diagnostics"]["contact_damaged"]).is_equal([3])
+
+
+# CONTACT-overlap: the same pair remains overlapped -> no repeat damage during invulnerability; re-arm stays false.
+func test_contact_overlap_no_repeat_damage_rearm_false() -> void:
+	var st0 := RULES.empty_state()
+	var env: Dictionary = {
+		"task": "refresh_fire",
+		"contact_input": [{"id": 4}],
+		"contact_invulnerability_ticks": 30,
+		"contact_damage": 1,
+	}
+	var first: Dictionary = RULES.step(env, st0, 210)
+	assert_int(int(first["state"]["segments_lost"])).is_equal(1)
+	# Next step, still overlapped, still inside invulnerability -> no second damage.
+	var second: Dictionary = RULES.step(env, first["state"], 211)
+	assert_int(int(second["state"]["segments_lost"])).is_equal(1)
+	var dmg2 := 0
+	for e in second["events"]:
+		if e["type"] == "contact_damage_event":
+			dmg2 += 1
+	assert_int(dmg2).is_equal(0)
+	# After the invulnerability window expires, persistent overlap STILL cannot repeat damage (re-arm required).
+	var after_invuln: Dictionary = RULES.step(env, second["state"], 241)
+	assert_int(int(after_invuln["state"]["segments_lost"])).is_equal(1)
+	var dmg3 := 0
+	for e in after_invuln["events"]:
+		if e["type"] == "contact_damage_event":
+			dmg3 += 1
+	assert_int(dmg3).is_equal(0)
+	# Re-arm stays false while the pair remains overlapped.
+	assert_bool(after_invuln["state"]["contact_rearm"][4]).is_false()
+
+
+# CONTACT-separate-rearm: pair separates then contacts again -> exactly one NEW legal event after re-arm.
+func test_contact_separate_rearm_exactly_one_new_legal_event() -> void:
+	var st0 := RULES.empty_state()
+	var env: Dictionary = {
+		"task": "refresh_fire",
+		"contact_input": [{"id": 5}],
+		"contact_invulnerability_ticks": 30,
+		"contact_damage": 1,
+	}
+	var c1: Dictionary = RULES.step(env, st0, 220)
+	assert_int(int(c1["state"]["segments_lost"])).is_equal(1)
+	# Separation step: the victim is no longer in the overlap set -> re-arm event, rearm flips true.
+	var sep: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c1["state"], 221)
+	assert_bool(sep["state"]["contact_rearm"][5]).is_true()
+	var rearmed := 0
+	for e in sep["events"]:
+		if e["type"] == "contact_rearm_event" and int(e["id"]) == 5:
+			rearmed += 1
+	assert_int(rearmed).is_equal(1)
+	assert_array(sep["diagnostics"]["contact_rearmed"]).is_equal([5])
+	# A new overlap after separation -> exactly one NEW legal damage event (segments_lost=2).
+	var c2: Dictionary = RULES.step(env, sep["state"], 222)
+	assert_int(int(c2["state"]["segments_lost"])).is_equal(2)
+	var dmg2 := 0
+	for e in c2["events"]:
+		if e["type"] == "contact_damage_event":
+			dmg2 += 1
+	assert_int(dmg2).is_equal(1)
+
+
+# CONTACT-simultaneous: two enemies contact in one step -> a SINGLE damage event (recommended default, decision #4;
+# invulnerability swallows the simultaneous set). Nx stacking is an explicit unresolved boundary, reported not implemented.
+func test_contact_simultaneous_single_damage_event_merged() -> void:
+	var st0 := RULES.empty_state()
+	var res: Dictionary = RULES.step({
+		"task": "refresh_fire",
+		"contact_input": [{"id": 7}, {"id": 8}],
+		"contact_invulnerability_ticks": 30,
+		"contact_damage": 1,
+	}, st0, 230)
+	var st: Dictionary = res["state"]
+	# Exactly ONE damage event: the simultaneous set merges (unresolved boundary: Nx stacking is NOT implemented).
+	var dmg := 0
+	for e in res["events"]:
+		if e["type"] == "contact_damage_event":
+			dmg += 1
+	assert_int(dmg).is_equal(1)
+	assert_int(int(st["segments_lost"])).is_equal(1)
+	# The whole simultaneous set enters rearm-required (merged/single event).
+	assert_bool(st["contact_rearm"].has(7)).is_true()
+	assert_bool(st["contact_rearm"].has(8)).is_true()
+	assert_bool(st["contact_rearm"][7]).is_false()
+	assert_bool(st["contact_rearm"][8]).is_false()
+
+
+# CONTACT-boundary: contact at the arena boundary -> separation + recoverability (no sticky lock, no
+# escape-through-boundary in the rules seam; the recoverable route is asserted by re-arm + a new legal contact).
+func test_contact_boundary_separation_and_recoverable() -> void:
+	var st0 := RULES.empty_state()
+	var env: Dictionary = {
+		"task": "refresh_fire",
+		"contact_input": [{"id": 9}],
+		"contact_invulnerability_ticks": 30,
+		"contact_damage": 1,
+	}
+	var c1: Dictionary = RULES.step(env, st0, 240)
+	assert_int(int(c1["state"]["segments_lost"])).is_equal(1)
+	# Boundary separation: the victim separates -> re-arm (recoverable spacing, not a sticky lock).
+	var sep: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c1["state"], 241)
+	assert_bool(sep["state"]["contact_rearm"][9]).is_true()
+	# Recoverability: a new overlap with the same boundary victim is a new legal contact.
+	var c2: Dictionary = RULES.step(env, sep["state"], 242)
+	assert_int(int(c2["state"]["segments_lost"])).is_equal(2)
+	var dmg2 := 0
+	for e in c2["events"]:
+		if e["type"] == "contact_damage_event":
+			dmg2 += 1
+	assert_int(dmg2).is_equal(1)
+
+
+# CONTACT-removal: contacted target removed during protection -> contact/rearm state cleaned up (no phantom rearm);
+# after protection expires, a future new contact is legal again (future re-arm behavior).
+func test_contact_removal_during_protection_cleans_state() -> void:
+	var st0 := RULES.empty_state()
+	var env: Dictionary = {
+		"task": "refresh_fire",
+		"contact_input": [{"id": 11}],
+		"contact_invulnerability_ticks": 30,
+		"contact_damage": 1,
+	}
+	var c1: Dictionary = RULES.step(env, st0, 250)
+	assert_int(int(c1["state"]["segments_lost"])).is_equal(1)
+	assert_bool(c1["state"]["contact_rearm"].has(11)).is_true()
+	# The contacted victim is removed during protection: rearm/contact state is cleaned (erased, not re-armed).
+	var rem: Dictionary = RULES.step({
+		"task": "refresh_fire",
+		"removed_ids": [11],
+		"contact_input": [],
+	}, c1["state"], 251)
+	assert_bool(rem["state"]["contact_rearm"].has(11)).is_false()
+	var phantom_rearm := 0
+	for e in rem["events"]:
+		if e["type"] == "contact_rearm_event":
+			phantom_rearm += 1
+	assert_int(phantom_rearm).is_equal(0)
+	# Future re-arm behavior: after protection expires (tick 300 > until 280), a new overlap is a fresh legal contact.
+	var fresh: Dictionary = RULES.step({
+		"task": "refresh_fire",
+		"contact_input": [{"id": 12}],
+		"contact_invulnerability_ticks": 30,
+		"contact_damage": 1,
+	}, rem["state"], 300)
+	assert_int(int(fresh["state"]["segments_lost"])).is_equal(2)
+	var dmg_new := 0
+	for e in fresh["events"]:
+		if e["type"] == "contact_damage_event":
+			dmg_new += 1
+	assert_int(dmg_new).is_equal(1)
+
+
+# Additive compatibility: fixtures/steps without contact_input leave contact state undisturbed (segments_lost stays 0,
+# no invulnerability armed, no contact events) - the existing TARGET-*/KILL-* semantics are unchanged.
+func test_contact_absent_preserves_existing_semantics() -> void:
+	var st0 := RULES.empty_state()
+	var res: Dictionary = RULES.step({"task": "refresh_fire"}, st0, 260)
+	assert_int(int(res["state"]["segments_lost"])).is_equal(0)
+	assert_int(int(res["state"]["contact_invulnerable_until_tick"])).is_equal(-1)
+	assert_bool(res["state"]["contact_rearm"].is_empty()).is_true()
+	var dmg := 0
+	for e in res["events"]:
+		if e["type"] == "contact_damage_event":
+			dmg += 1
+	assert_int(dmg).is_equal(0)

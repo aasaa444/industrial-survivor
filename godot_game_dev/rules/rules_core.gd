@@ -28,16 +28,27 @@
 #   live_reduction_count   - number of live candidates reduced (kills) in this step.
 # These are additive diagnostics; they do not change state/event semantics, ordering, or the kill path.
 #
-# Guidance references:
-#   DC_SYS_01_TECH_INPUT §2.2   total-order key chain k1/k2/stable_id; quantize to fixed-scale integer buckets;
-#                               sort a derived immutable copy; never sort an engine/live container in place.
-#   PROPOSALS_CR002_004_005     M-1 discrete two-scalar key chain; cr-004 (ii) snapshot-authoritative drain + no-hit on invalid;
-#                               cr-005 quiet-cycle no-target branch fields (rule-side; presentation is a later task).
-#   NEXT_IMPL_UNIT_PLAN S2       kill path as thin deterministic pure logic; KILL-single / KILL-multi / KILL-death-removal.
+# C2 contact extension (this unit, C2 rules-core contact pure logic; NEXT_IMPL_UNIT_PLAN_v0_3 unit B):
+#   The rules core receives adapter contact observations (`contact_input` = [{id}] of currently eligible overlapping
+#   victims, translated from engine-side collision/overlap detection at the ADR-TECH-01 seam). It never owns engine
+#   entities: it only classifies what it receives and emits domain events/state.
+#   Model (deterministic, zero RNG, decision #4 "one legal contact = one damage event"):
+#     eligible overlap (adapter input) -> legal contact judgement
+#       -> exactly ONE contact_damage_event per step (+ segments_lost deducted once)
+#       -> brief global contact invulnerability window (state.contact_invulnerable_until_tick)
+#       -> the whole simultaneous overlapping set merges into that single event (re-arm required for the entire set)
+#     re-arm        -> a rearm-required victim re-arms ONLY after it separates (no longer in the current overlap set);
+#                      persistent overlap cannot repeat damage (CONTACT-overlap). Separation also ENDS the brief
+#                      invulnerability window, so a future new contact after re-arm is legal (CONTACT-separate-rearm /
+#                      C2 points: "分离后无敌结束、未来新接触可再触发"); removal during protection cleans state (CONTACT-removal).
+#   life deduction semantics: contact damage deducts `segments_lost` (0..3 per the three life segments); defeat/terminal
+#   arbitration is deferred (not this unit) — segments_lost is capped at 3 and no defeat/reset is triggered here.
+#   All contact numbers (invulnerability ticks, damage per contact) are ENVELOPE PARAMETERS with candidate defaults,
+#   never promoted rule constants (promotion_authority=User; NUMBERS NOT FROZEN).
 class_name DshRulesCore
 extends RefCounted
 
-const CONFIG_VERSION: String = "rules-core-v2"
+const CONFIG_VERSION: String = "rules-core-v3"
 
 # A fresh, empty rules state. `live_candidates` is the current live observation set (adapter-normalized);
 # the core never mutates it in place and always derives ordered_ids from an immutable copy.
@@ -55,6 +66,10 @@ static func empty_state() -> Dictionary:
 		"resolution_outcomes": {},    # {id: "hit" | "no-hit-invalid"}
 		"kill_outcomes": {},          # {id: true} for targets that died in this shot (hp <= 0)
 		"next_eligible_fire_tick": 0,
+		# --- C2 contact state (rules-core owned; no engine entities) ---
+		"segments_lost": 0,                     # life segments lost (0..3); defeat arbitration deferred (not this unit)
+		"contact_invulnerable_until_tick": -1,  # global brief invulnerability window end (tick); -1 = not invulnerable
+		"contact_rearm": {},                    # {victim_id: bool} - false = rearm required (needs separation); absent = armed
 	}
 
 # --- Pure quantization helper -------------------------------------------------
@@ -161,6 +176,70 @@ static func _kill_decision_trace(state: Dictionary, killed: Dictionary, tick: in
 	return out
 
 
+# --- C2 pure contact evaluation (engine-free, deterministic, zero RNG) ----------
+# See header contract comment. Adapter supplies `contact_input` = [{id}] of currently eligible overlapping victims.
+#   [1] Re-arm pass: a rearm-required victim that is no longer overlapping re-arms (separation predicate satisfied).
+#   [2] Legal contact pass: exactly ONE damage event per step; the whole simultaneous set merges into it (decision #4
+#       recommended default: single contact damage + invulnerability swallowing; Nx stacking is an explicit unresolved
+#       boundary reported by the CONTACT-simultaneous fixture, not implemented here).
+# All values (invulnerability ticks, damage per contact) are envelope parameters with candidate defaults.
+static func _apply_contact(state: Dictionary, envelope: Dictionary, events: Array, tick: int, diagnostics: Dictionary) -> void:
+	var contact_input: Array = envelope.get("contact_input", [])
+	var invuln_ticks: int = int(envelope.get("contact_invulnerability_ticks", 30))
+	if invuln_ticks < 0:
+		invuln_ticks = 0
+	var damage: int = int(envelope.get("contact_damage", 1))
+	if damage < 1:
+		damage = 1
+
+	# Current overlapping victim id set (deterministic input order).
+	var in_contact: Dictionary = {}
+	for item in contact_input:
+		var cid: int = int(item.get("id", -1))
+		if cid >= 0:
+			in_contact[cid] = true
+
+	# [1] Re-arm: a rearm-required victim that separated re-arms. Separation also ENDS the brief invulnerability
+	# window (futile re-arm while still protected would block "separation -> future new contact legal", C2 points:
+	# "分离后无敌结束、未来新接触可再触发").
+	var rearm_keys: Array = state["contact_rearm"].keys()
+	for rev_raw in rearm_keys:
+		var rid: int = int(rev_raw)
+		if not state["contact_rearm"][rid] and not in_contact.has(rid):
+			state["contact_rearm"][rid] = true
+			state["contact_invulnerable_until_tick"] = -1
+			diagnostics["contact_rearmed"].append(rid)
+			events.append({"type": "contact_rearm_event", "id": rid, "tick": tick})
+
+	# [2] Legal contact: exactly one damage event per step.
+	for item in contact_input:
+		var cid: int = int(item.get("id", -1))
+		if cid < 0:
+			continue
+		# Rearm required for this victim -> persistent overlap cannot repeat damage (CONTACT-overlap).
+		if state["contact_rearm"].get(cid, true) == false:
+			continue
+		# Global invulnerability window -> no second damage during protection (decision #4).
+		if tick < int(state.get("contact_invulnerable_until_tick", -1)):
+			continue
+		# Legal contact: exactly one damage event; the whole overlapping set merges into it.
+		var segments_lost: int = int(state.get("segments_lost", 0)) + damage
+		if segments_lost > 3:
+			segments_lost = 3    # three life segments; defeat/terminal arbitration deferred (not this unit)
+		state["segments_lost"] = segments_lost
+		state["contact_invulnerable_until_tick"] = tick + invuln_ticks
+		for mid in in_contact.keys():
+			state["contact_rearm"][int(mid)] = false
+		diagnostics["contact_damaged"].append(cid)
+		events.append({"type": "contact_damage_event", "victim_id": cid, "segments_lost": segments_lost, "tick": tick})
+		events.append({
+			"type": "contact_invulnerable_event",
+			"until_tick": int(state["contact_invulnerable_until_tick"]),
+			"tick": tick,
+		})
+		break
+
+
 # --- Headless seam: step(domain_input_envelope, prior_state, tick) ---------------
 # Returns {state, events, diagnostics}. `prior_state` is never mutated (clone-on-write).
 # Envelope: {
@@ -170,6 +249,9 @@ static func _kill_decision_trace(state: Dictionary, killed: Dictionary, tick: in
 #   "removed_ids": [id, ...] (explicit domain events drained at this step's drain point),
 #   "attack_damage": int (default 1; kill-path single-hit damage applied to each hit target during `resolve`,
 #                         supplied by the caller/ledger as a parameter, NOT a hardcoded constant promoted),
+#   "contact_input": [{id}, ...] (C2: adapter contact observations of currently eligible overlapping victims),
+#   "contact_invulnerability_ticks": int (C2 candidate default 30; envelope parameter, NOT frozen),
+#   "contact_damage": int (C2 candidate default 1; envelope parameter, NOT frozen),
 # }
 static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Dictionary:
 	var state: Dictionary = _clone_input(prior_state)
@@ -185,6 +267,10 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 		"candidate_key_trace": [],
 		"kill_decision_trace": [],
 		"live_reduction_count": 0,
+		# --- C2 contact diagnostics (additive, read-only exports) ---
+		"contact_damaged": [],
+		"contact_rearmed": [],
+		"segments_lost": 0,
 	}
 
 	# [a] Named drain point: drain invalidation/removal domain events at the start of this step's resolution boundary.
@@ -193,11 +279,19 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 		state["invalidation_log"].append({"id": r, "tick": tick})
 		events.append({"type": "invalidation_event", "id": r, "tick": tick})
 		state["live_candidates"] = _filter_alive_ids(state["live_candidates"], r)
+		# C2 CONTACT-removal: a contacted victim removed during protection cleans its rearm/contact state so a future
+		# contact with a fresh/removed id re-arms normally (state cleanup, future re-arm behavior).
+		state["contact_rearm"].erase(int(r))
 
 	var task: String = envelope.get("task", "none")
 	var attack_damage: int = int(envelope.get("attack_damage", 1))
 	if attack_damage < 1:
 		attack_damage = 1
+
+	# C2 contact evaluation runs when the adapter supplies contact observations (independent of the attack task;
+	# fixtures that do not pass contact_input are untouched - additive).
+	if envelope.has("contact_input"):
+		_apply_contact(state, envelope, events, tick, diagnostics)
 
 	if task == "refresh_fire":
 		diagnostics["steps"].append("refresh_fire")
@@ -284,4 +378,5 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 
 	# [h] Return a fresh (new_state, events, diagnostics); prior_state untouched.
 	state["config_version"] = CONFIG_VERSION
+	diagnostics["segments_lost"] = int(state.get("segments_lost", 0))
 	return {"state": state, "events": events, "diagnostics": diagnostics}
