@@ -1,0 +1,54 @@
+# ============================================================
+# New_Game — repository root ignore rules
+# Maintained by Toolchain Engineer. Git tracks config/source,
+# never runtime caches or downloaded binary tool artifacts.
+# docs/ is intentionally NOT ignored: governance & evidence must
+# be version controlled.
+# ============================================================
+
+# ---- Godot 4.x editor/runtime caches (regenerate on open/save) ----
+.godot/
+.godot/*
+
+# ---- gdmcp toolchain: keep the .gdmcp directory (future project
+#      checkpoints/config), but never commit the downloaded CLI
+#      binary. gdmcp.exe is a ~4.7 MB compiled artifact fetched at
+#      tool setup; a toolchain repo versions config, not binaries. ---
+godot_game_dev/.gdmcp/bin/
+.gdmcp/bin/
+
+# ---- Godot platform/export output ----
+/android/
+/ios/
+/web/
+/export/
+*/build/
+*/export_presets.cfg
+
+# ---- Godot translation/import caches (safe to regenerate) ----
+*.tmp
+*.translation.bin
+
+# ---- Temporary & editor/OS junk ----
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+.fseventsd/
+.idea/
+.vscode/
+*.code-workspace
+
+# ---- Logs / coverage output if any tooling produces them ----
+logs/
+coverage/
+*.cache
+
+# ---- DSH / skill harness internal tooling state (not project
+#      deliverables; regenerable transient artifacts) ----
+.dsh-vision-router/
+.skill-evals/
