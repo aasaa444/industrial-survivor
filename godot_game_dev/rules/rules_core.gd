@@ -22,6 +22,12 @@
 #                         in SEMANTICS_INVALIDATION_FINAL_v0_1.md: removed/invalid => no hit; death is the mechanism-legal
 #                         removal that the adapter feeds forward on the next pre-fire refresh.
 #
+# R3 O5 (this unit, diagnostics-only, additive): the step() diagnostics read-only exports
+#   candidate_key_trace    - ordered [{stable_id, k1_bucket, k2_bucket}] for the current live candidate set (M-1 key chain order),
+#   kill_decision_trace    - [{stable_id, k1_bucket, k2_bucket, tick}] for every target killed by this shot (independent, read-only),
+#   live_reduction_count   - number of live candidates reduced (kills) in this step.
+# These are additive diagnostics; they do not change state/event semantics, ordering, or the kill path.
+#
 # Guidance references:
 #   DC_SYS_01_TECH_INPUT §2.2   total-order key chain k1/k2/stable_id; quantize to fixed-scale integer buckets;
 #                               sort a derived immutable copy; never sort an engine/live container in place.
@@ -123,6 +129,38 @@ static func _find_candidate(candidates: Array, sid: int) -> Dictionary:
 	return {}
 
 
+# --- R3 O5 read-only key-trace helpers (diagnostics only; never mutate state). ---
+# Ordered [{stable_id, k1_bucket, k2_bucket}] for the given ordered id list (M-1 key chain order).
+static func _key_trace_from_ids(state: Dictionary, ids: Array) -> Array:
+	var out: Array = []
+	for sid_raw in ids:
+		var sid: int = int(sid_raw)
+		var cand := _find_candidate(state.get("live_candidates", []), sid)
+		if not cand.is_empty():
+			out.append({
+				"stable_id": sid,
+				"k1_bucket": int(cand.get("k1_bucket", 0)),
+				"k2_bucket": int(cand.get("k2_bucket", 0)),
+			})
+	return out
+
+
+# Kill decision-key tuples for each killed id: [{stable_id, k1_bucket, k2_bucket, tick}].
+# Key order follows the killed dict insertion order (snapshot order), which is deterministic.
+static func _kill_decision_trace(state: Dictionary, killed: Dictionary, tick: int) -> Array:
+	var out: Array = []
+	for sid_raw in killed:
+		var sid: int = int(sid_raw)
+		var cand := _find_candidate(state.get("live_candidates", []), sid)
+		out.append({
+			"stable_id": sid,
+			"k1_bucket": int(cand.get("k1_bucket", 0)),
+			"k2_bucket": int(cand.get("k2_bucket", 0)),
+			"tick": tick,
+		})
+	return out
+
+
 # --- Headless seam: step(domain_input_envelope, prior_state, tick) ---------------
 # Returns {state, events, diagnostics}. `prior_state` is never mutated (clone-on-write).
 # Envelope: {
@@ -144,6 +182,9 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 		"hit_results": {},
 		"kill_outcomes": {},
 		"next_eligible_fire_tick": state.get("next_eligible_fire_tick", 0),
+		"candidate_key_trace": [],
+		"kill_decision_trace": [],
+		"live_reduction_count": 0,
 	}
 
 	# [a] Named drain point: drain invalidation/removal domain events at the start of this step's resolution boundary.
@@ -169,6 +210,8 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 		var ordered: Array = ordered_candidates(state)
 		state["ordered_ids"] = ordered.duplicate(true)
 		diagnostics["ordered_ids"] = ordered.duplicate(true)
+		# [O5] Read-only candidate key trace in M-1 key-chain order (additive diagnostics only).
+		diagnostics["candidate_key_trace"] = _key_trace_from_ids(state, ordered)
 		# [d] Lock this shot's immutable snapshot after refresh.
 		state["target_snapshot_ids"] = ordered.duplicate(true)
 		state["lock_tick"] = tick
@@ -230,6 +273,14 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 		state["kill_outcomes"] = killed.duplicate(true)
 		diagnostics["hit_results"] = hit_map.duplicate(true)
 		diagnostics["kill_outcomes"] = killed.duplicate(true)
+		# [O5] Additive diagnostics after resolution:
+		#   - candidate key trace of the (post-kill) live set in M-1 key-chain order,
+		#   - independent kill decision key tuples (k1/k2/stable_id buckets + tick),
+		#   - live reduction (kill) count for this shot.
+		diagnostics["candidate_key_trace"] = _key_trace_from_ids(state, ordered_candidates(state))
+		if not killed.is_empty():
+			diagnostics["kill_decision_trace"] = _kill_decision_trace(state, killed, tick)
+			diagnostics["live_reduction_count"] = killed.size()
 
 	# [h] Return a fresh (new_state, events, diagnostics); prior_state untouched.
 	state["config_version"] = CONFIG_VERSION

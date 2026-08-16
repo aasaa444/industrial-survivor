@@ -8,6 +8,8 @@
 #       an empty (no-target) shot emits only a quiet non-color cue, never a fabricated lock or phantom hit
 #       (ADR-TECH-02 / UX-03 S2 empty-shot non-forgery).
 #   - candidate_from_observation -> deterministic ordering with the pure rules core (M-1 key chain).
+#
+# R1 extension (this unit): input -> movement -> NEXT-shot lock causality contracts (ADR-TECH-04 / UX-02 U2-B/U2-C).
 extends GdUnitTestSuite
 
 const ADAPTER = preload("res://adapter/adapter.gd")
@@ -146,3 +148,83 @@ func test_adapters_envelope_drives_core_lock() -> void:
 	# Feedback for a locked shot with no-hit-resolved state must show lock but no phantom hit.
 	var fb: Dictionary = ADAPTER.feedback_from_result(res)
 	assert_array(fb["lock_target"]).is_equal([5])
+
+
+# ============================ R1: input -> movement -> NEXT-shot lock causality ============================
+# (ADR-TECH-04: movement changes the NEXT pre-fire refresh lock; the CURRENT shot's snapshot stays immutable;
+#  UX-02 U2-B / U2-C.)
+
+# Movement intent is carried into the domain envelope as intent-only and never changes rules semantics.
+func test_movement_intent_does_not_change_rules_semantics() -> void:
+	var candidates: Array = [
+		ADAPTER.candidate_from_observation(1, Vector2(60, 0), Vector2(0, 0), Vector2(35, 0), 1, 1.0),
+		ADAPTER.candidate_from_observation(2, Vector2(10, 0), Vector2(0, 0), Vector2(35, 0), 1, 1.0),
+	]
+	var moving_env: Dictionary = ADAPTER.make_envelope(
+		"refresh_fire", candidates, ADAPTER.movement_from_input({"d": true}), 1)
+	var still_env: Dictionary = ADAPTER.make_envelope(
+		"refresh_fire", candidates, ADAPTER.movement_from_input({}), 1)
+	var res_moving: Dictionary = RULES.step(moving_env, RULES.empty_state(), 5)
+	var res_still: Dictionary = RULES.step(still_env, RULES.empty_state(), 5)
+	# The rules core ignores movement intent entirely: identical candidates -> identical ordered/snapshot.
+	assert_array(res_moving["state"]["ordered_ids"]).is_equal(res_still["state"]["ordered_ids"])
+	assert_array(res_moving["state"]["target_snapshot_ids"]).is_equal(res_still["state"]["target_snapshot_ids"])
+	assert_bool(res_moving["state"]["no_target_branch"]).is_equal(res_still["state"]["no_target_branch"])
+
+
+# U2-B: after the player moves, the NEXT refresh re-observes the moved location and re-locks (the attack-line target,
+# the nearest-first id, flips); the CURRENT shot's locked snapshot stays immutable during movement (ADR-TECH-04).
+func test_movement_causality_next_refresh_relocks() -> void:
+	# Enemies: A id=1 at (60,0), B id=2 at (10,0); cluster_center fixed (35,0).
+	# Player at P0=(0,0): threat buckets B(k1=10) < A(k1=60) -> lock snapshot [2,1]; nearest-first lock = B (id 2).
+	var p0 := Vector2(0, 0)
+	var can_p0: Array = [
+		ADAPTER.candidate_from_observation(1, Vector2(60, 0), p0, Vector2(35, 0), 1, 1.0),
+		ADAPTER.candidate_from_observation(2, Vector2(10, 0), p0, Vector2(35, 0), 1, 1.0),
+	]
+	var r_p0: Dictionary = RULES.step(
+		ADAPTER.make_envelope("refresh_fire", can_p0, ADAPTER.movement_from_input({"d": true}), 1),
+		RULES.empty_state(), 10)
+	# B is nearest-threat first: the full locked snapshot is [2,1].
+	assert_array(r_p0["state"]["target_snapshot_ids"]).is_equal([2, 1])
+
+	# Player moves to P1=(60,0) (d held). The CURRENT shot already locked [2,1]; movement intent must NOT live-retarget it.
+	var p1 := Vector2(60, 0)
+	var can_p1: Array = [
+		ADAPTER.candidate_from_observation(1, Vector2(60, 0), p1, Vector2(35, 0), 1, 1.0),
+		ADAPTER.candidate_from_observation(2, Vector2(10, 0), p1, Vector2(35, 0), 1, 1.0),
+	]
+	var resolve_after_move: Dictionary = RULES.step(
+		ADAPTER.make_envelope("resolve", [], ADAPTER.movement_from_input({"d": true}), 1),
+		r_p0["state"], 11)
+	# Resolution reads ONLY the immutable locked snapshot [2,1] (both locked ids hit), even though the player moved.
+	assert_array(resolve_after_move["state"]["target_snapshot_ids"]).is_equal([2, 1])
+	assert_bool(resolve_after_move["state"]["hit_results"].has(2)).is_true()
+	assert_bool(resolve_after_move["state"]["hit_results"].has(1)).is_true()
+
+	# NEXT pre-fire refresh observes positions from the moved player location: A(k1=|60-60|=0) < B(k1=|10-60|=50)
+	# -> the next lock re-orders to [1,2]; the nearest-first attack-line target flips from B to A (id 1).
+	var r_p1: Dictionary = RULES.step(
+		ADAPTER.make_envelope("refresh_fire", can_p1, ADAPTER.movement_from_input({"d": true}), 1),
+		resolve_after_move["state"], 12)
+	assert_array(r_p1["state"]["target_snapshot_ids"]).is_equal([1, 2])
+	# Cross-shot causality: movement changed WHICH target is locked first in the NEXT shot ([0] id 2 -> id 1).
+	assert_int(int(r_p0["state"]["target_snapshot_ids"][0])).is_equal(2)
+	assert_int(int(r_p1["state"]["target_snapshot_ids"][0])).is_equal(1)
+
+
+# U2-C control: unchanged geometry across runs -> bitwise-identical lock (movement causality is stable/readable).
+func test_same_geometry_same_lock_across_runs() -> void:
+	var candidates: Array = [
+		ADAPTER.candidate_from_observation(1, Vector2(60, 0), Vector2(0, 0), Vector2(35, 0), 1, 1.0),
+		ADAPTER.candidate_from_observation(2, Vector2(10, 0), Vector2(0, 0), Vector2(35, 0), 1, 1.0),
+	]
+	var run1: Dictionary = RULES.step(
+		ADAPTER.make_envelope("refresh_fire", candidates, ADAPTER.movement_from_input({}), 1),
+		RULES.empty_state(), 20)
+	var run2: Dictionary = RULES.step(
+		ADAPTER.make_envelope("refresh_fire", candidates, ADAPTER.movement_from_input({}), 1),
+		RULES.empty_state(), 21)
+	assert_array(run1["state"]["target_snapshot_ids"]).is_equal(run2["state"]["target_snapshot_ids"])
+	assert_array(run1["state"]["ordered_ids"]).is_equal(run2["state"]["ordered_ids"])
+

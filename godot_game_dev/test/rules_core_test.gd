@@ -4,6 +4,11 @@
 #   TARGET-tie, TARGET-container-order, TARGET-removal, TARGET-no-target, TARGET-float-epsilon.
 # S2 kill-path fixtures: KILL-single, KILL-multi, KILL-death-removal, plus enemy-lifetime (hp) field compatibility
 # with the existing TARGET-* core semantics, and session-level kill-cycle / clean-reset.
+#
+# R3 O4 (this unit): per-family container-order variance variants for the KILL-* families
+#   (each family is exercised under two candidate-insertion orders and must agree bitwise).
+# R3 O5 (this unit): diagnostics-layer read-only kill decision-key trace tuples
+#   (candidate_key_trace / kill_decision_trace / live_reduction_count), exported independently of state/events.
 # Fixed seed + fixed tick; exact-value assertions.
 extends GdUnitTestSuite
 
@@ -323,3 +328,167 @@ func test_session_kill_cycle_then_reset_clean() -> void:
 	assert_bool(s.rules_state["hit_results"].is_empty()).is_true()
 	assert_bool(s.rules_state["invalidation_log"].is_empty()).is_true()
 	assert_array(s.rules_state["target_snapshot_ids"]).is_empty()
+
+
+# ============================ R3 O4: KILL-* per-family container-order variants ============================
+# Each KILL-* family is executed under two candidate-insertion orders; ordered/snapshot AND kill behavior must be
+# bitwise equivalent (the total-order key chain makes ordering container-independent, QA observation O4).
+
+# KILL-single family variant: hp=1 target + survivor, both insertion orders -> identical snapshot and one-shot kill.
+func test_kill_single_container_order_variant() -> void:
+	var set_a: Array = [
+		{"stable_id": 1, "k1_bucket": 0, "k2_bucket": 2, "alive": true, "hp": 1},
+		{"stable_id": 2, "k1_bucket": 0, "k2_bucket": 1, "alive": true, "hp": 5},
+	]
+	var set_b: Array = [
+		{"stable_id": 2, "k1_bucket": 0, "k2_bucket": 1, "alive": true, "hp": 5},
+		{"stable_id": 1, "k1_bucket": 0, "k2_bucket": 2, "alive": true, "hp": 1},
+	]
+	var ra := RULES.empty_state()
+	ra["live_candidates"] = set_a
+	var rb := RULES.empty_state()
+	rb["live_candidates"] = set_b
+	# Container-order independence of the key chain: both orders sort to [2,1] -> identical snapshot.
+	assert_array(RULES.ordered_candidates(ra, {})).is_equal([2, 1])
+	assert_array(RULES.ordered_candidates(rb, {})).is_equal([2, 1])
+	var ref_a: Dictionary = RULES.step({"task": "refresh_fire", "live_candidates": set_a}, RULES.empty_state(), 71)
+	var ref_b: Dictionary = RULES.step({"task": "refresh_fire", "live_candidates": set_b}, RULES.empty_state(), 72)
+	assert_array(ref_a["state"]["target_snapshot_ids"]).is_equal([2, 1])
+	assert_array(ref_b["state"]["target_snapshot_ids"]).is_equal([2, 1])
+	# One-shot kill behavior identical across insertion orders: id2 (hp=5) survives, id... (both hit; only hp<=0 dies)
+	var shot_a: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, ref_a["state"], 73)
+	var shot_b: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, ref_b["state"], 74)
+	assert_bool(shot_a["state"]["kill_outcomes"].has(1)).is_true()
+	assert_bool(shot_b["state"]["kill_outcomes"].has(1)).is_true()
+	assert_bool(shot_a["state"]["kill_outcomes"].has(2)).is_false()
+	assert_bool(shot_b["state"]["kill_outcomes"].has(2)).is_false()
+
+
+# KILL-multi family variant: hp=2 pair, both insertion orders -> identical snapshot and identical two-shot death progression.
+func test_kill_multi_container_order_variant() -> void:
+	var set_a: Array = [
+		{"stable_id": 1, "k1_bucket": 0, "k2_bucket": 0, "alive": true, "hp": 2},
+		{"stable_id": 2, "k1_bucket": 0, "k2_bucket": 1, "alive": true, "hp": 2},
+	]
+	var set_b: Array = [
+		{"stable_id": 2, "k1_bucket": 0, "k2_bucket": 1, "alive": true, "hp": 2},
+		{"stable_id": 1, "k1_bucket": 0, "k2_bucket": 0, "alive": true, "hp": 2},
+	]
+	var ref_a: Dictionary = RULES.step({"task": "refresh_fire", "live_candidates": set_a}, RULES.empty_state(), 80)
+	var ref_b: Dictionary = RULES.step({"task": "refresh_fire", "live_candidates": set_b}, RULES.empty_state(), 81)
+	assert_array(ref_a["state"]["target_snapshot_ids"]).is_equal([1, 2])
+	assert_array(ref_b["state"]["target_snapshot_ids"]).is_equal([1, 2])
+	# shot 1: both step to hp=1, no kills (both orders identical).
+	var s1a: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, ref_a["state"], 82)
+	var s1b: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, ref_b["state"], 83)
+	assert_bool(s1a["state"]["kill_outcomes"].is_empty()).is_true()
+	assert_bool(s1b["state"]["kill_outcomes"].is_empty()).is_true()
+	# shot 2 on the SAME locked snapshot: both die (identical across orders).
+	var s2a: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, s1a["state"], 84)
+	var s2b: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, s1b["state"], 85)
+	assert_bool(s2a["state"]["kill_outcomes"].has(1)).is_true()
+	assert_bool(s2a["state"]["kill_outcomes"].has(2)).is_true()
+	assert_bool(s2b["state"]["kill_outcomes"].has(1)).is_true()
+	assert_bool(s2b["state"]["kill_outcomes"].has(2)).is_true()
+
+
+# KILL-death-removal family variant: hp=1 + hp=5 pair, both insertion orders -> identical death/removal and the
+# follower refresh locks only the survivor.
+func test_kill_death_removal_container_order_variant() -> void:
+	var set_a: Array = [
+		{"stable_id": 1, "k1_bucket": 0, "k2_bucket": 0, "alive": true, "hp": 1},
+		{"stable_id": 2, "k1_bucket": 0, "k2_bucket": 0, "alive": true, "hp": 5},
+	]
+	var set_b: Array = [
+		{"stable_id": 2, "k1_bucket": 0, "k2_bucket": 0, "alive": true, "hp": 5},
+		{"stable_id": 1, "k1_bucket": 0, "k2_bucket": 0, "alive": true, "hp": 1},
+	]
+	var ref_a: Dictionary = RULES.step({"task": "refresh_fire", "live_candidates": set_a}, RULES.empty_state(), 90)
+	var ref_b: Dictionary = RULES.step({"task": "refresh_fire", "live_candidates": set_b}, RULES.empty_state(), 91)
+	assert_array(ref_a["state"]["target_snapshot_ids"]).is_equal([1, 2])
+	assert_array(ref_b["state"]["target_snapshot_ids"]).is_equal([1, 2])
+	var shot_a: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, ref_a["state"], 92)
+	var shot_b: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, ref_b["state"], 93)
+	assert_bool(shot_a["state"]["kill_outcomes"].has(1)).is_true()
+	assert_bool(shot_b["state"]["kill_outcomes"].has(1)).is_true()
+	assert_bool(shot_a["state"]["kill_outcomes"].has(2)).is_false()
+	assert_bool(shot_b["state"]["kill_outcomes"].has(2)).is_false()
+	# Follower refresh feeds only the live subset (deterministic extract) -> identical survivor-only snapshot.
+	var live_a: Array = []
+	for c in shot_a["state"]["live_candidates"]:
+		if bool(c.get("alive", true)):
+			live_a.append(c)
+	var live_b: Array = []
+	for c in shot_b["state"]["live_candidates"]:
+		if bool(c.get("alive", true)):
+			live_b.append(c)
+	assert_array(live_a).is_equal(live_b)
+	var next_a: Dictionary = RULES.step({"task": "refresh_fire", "live_candidates": live_a}, shot_a["state"], 94)
+	var next_b: Dictionary = RULES.step({"task": "refresh_fire", "live_candidates": live_b}, shot_b["state"], 95)
+	assert_array(next_a["state"]["target_snapshot_ids"]).is_equal([2])
+	assert_array(next_b["state"]["target_snapshot_ids"]).is_equal([2])
+
+
+# ============================ R3 O5: kill decision-key trace tuples (diagnostics, read-only) ============================
+# Independent, read-only trace tuple export of the kill decision keys (k1/k2/stable_id buckets) + tick, plus the
+# candidate key trace and live-reduction count. These live in diagnostics and never mutate state/events.
+
+# The diagnostics layer exports per-killed {stable_id, k1_bucket, k2_bucket, tick} decision-key tuples.
+func test_diagnostics_kill_decision_trace_exported() -> void:
+	var st0 := RULES.empty_state()
+	var refresh: Dictionary = RULES.step(
+		{"task": "refresh_fire", "live_candidates": [
+			{"stable_id": 1, "k1_bucket": 0, "k2_bucket": 2, "alive": true, "hp": 1},
+			{"stable_id": 2, "k1_bucket": 0, "k2_bucket": 1, "alive": true, "hp": 1},
+		]}, st0, 100)
+	var shot: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, refresh["state"], 101)
+	var d: Dictionary = shot["diagnostics"]
+	var trace: Array = d["kill_decision_trace"]
+	assert_array(trace).has_size(2)
+	# Both killed; k1 ties -> k2 decides first (id2 k2=1 < id1 k2=2); tuples carry the decision keys + tick.
+	assert_int(int(trace[0]["stable_id"])).is_equal(2)
+	assert_int(int(trace[0]["k1_bucket"])).is_equal(0)
+	assert_int(int(trace[0]["k2_bucket"])).is_equal(1)
+	assert_int(int(trace[0]["tick"])).is_equal(101)
+	assert_int(int(trace[1]["stable_id"])).is_equal(1)
+	assert_int(int(trace[1]["k1_bucket"])).is_equal(0)
+	assert_int(int(trace[1]["k2_bucket"])).is_equal(2)
+	assert_int(int(trace[1]["tick"])).is_equal(101)
+	# Live-reduction count matches the number of kills this shot.
+	assert_int(int(d["live_reduction_count"])).is_equal(2)
+	# Read-only: the export does not alter the state/events kill records.
+	assert_bool(shot["state"]["kill_outcomes"].has(1)).is_true()
+	assert_bool(shot["state"]["kill_outcomes"].has(2)).is_true()
+
+
+# The diagnostics layer exports the ordered candidate key trace on refresh, and a no-kill resolve yields an empty
+# kill trace + zero live reduction (read-only, deterministic).
+func test_diagnostics_candidate_key_trace_and_no_kill_resolve() -> void:
+	var st0 := RULES.empty_state()
+	var refresh: Dictionary = RULES.step(
+		{"task": "refresh_fire", "live_candidates": [
+			{"stable_id": 9, "k1_bucket": 1, "k2_bucket": 3, "alive": true, "hp": 5},
+			{"stable_id": 3, "k1_bucket": 0, "k2_bucket": 9, "alive": true, "hp": 5},
+			{"stable_id": 1, "k1_bucket": 0, "k2_bucket": 1, "alive": true, "hp": 5},
+		]}, st0, 110)
+	var d_refresh: Dictionary = refresh["diagnostics"]
+	var ctr: Array = d_refresh["candidate_key_trace"]
+	# Key-chain order on refresh: (0,1) -> id1, (0,9) -> id3, (1,3) -> id9.
+	assert_array(ctr).has_size(3)
+	assert_int(int(ctr[0]["stable_id"])).is_equal(1)
+	assert_int(int(ctr[0]["k1_bucket"])).is_equal(0)
+	assert_int(int(ctr[0]["k2_bucket"])).is_equal(1)
+	assert_int(int(ctr[1]["stable_id"])).is_equal(3)
+	assert_int(int(ctr[1]["k1_bucket"])).is_equal(0)
+	assert_int(int(ctr[1]["k2_bucket"])).is_equal(9)
+	assert_int(int(ctr[2]["stable_id"])).is_equal(9)
+	assert_int(int(ctr[2]["k1_bucket"])).is_equal(1)
+	assert_int(int(ctr[2]["k2_bucket"])).is_equal(3)
+	# No kill on this resolve (hp=5, damage 1): kill trace empty, live reduction 0, state untouched hit semantics.
+	var shot: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, refresh["state"], 111)
+	var d_shot: Dictionary = shot["diagnostics"]
+	assert_array(d_shot["kill_decision_trace"]).is_empty()
+	assert_int(int(d_shot["live_reduction_count"])).is_equal(0)
+	# Invalidation/exclusion does not fabricate a kill trace entry either.
+	assert_bool(shot["state"]["hit_results"].has(9)).is_true()
+	assert_bool(shot["state"]["kill_outcomes"].is_empty()).is_true()
