@@ -172,7 +172,7 @@
 - **未实现（本单元明确延后）:** 升级（cr-010..011）/ B2 三弧（cr-016..019）/ 终结/重置（cr-014..015）——**本单元仅提供 life 扣减字段骨架 + 封顶 3，不实现终局仲裁/自动重试**/ focus epoch（cr-012..013）/ spawn 节奏 / 敌人多段 HP / hint / no_target_cue 精确表现 / 资产 / 动画 / 音频 / 数值定稿 / 视觉 v0.2 / 导出 / 发布 / 持久化 / 玩家可见 Replay。
 - **未提升候选数值 / 未锁常数:** `contact_invulnerability_ticks`/`contact_damage`/`contact_separate_dist` 均为 **envelope/`@export` 候选参数**，非规则常数/Gate 判据/发布承诺；life 三格 + `segments_lost` 数值语义归 Systems（promotion_authority=User，未写死）；候选预算（六项 + `1280×720` 红线）未涉及。
 - **未批准/冻结任何 ADR / Systems 终裁 / fixture schema / 数值 / 表现形态:** 接触数值走 ledger 候选、promotion=User；`CONTACT-simultaneous` N× 叠加为显式未决边界（未实现 N×）；同时接触边界按设计「单次伤害事件 + 无敌吞并」为推荐默认并上报 QA。
-- **未豁免 QA:** 本地测试（headless 49/49 ×2 + self-test ×3 + runtime 注入观察）为本地证据，**不代表 Independent QA Gate 2 扩展 / Gate 3 前段验收**；QA 独立观察不豁免，尤其「接触→伤害→生命扣减→分离→再武装」玩家可玩路径须由 QA 独立判定。
+- **未豁免 QA:** 本地测试（headless 49/49 ×2 + self-test ×3 + GDMCP runtime smoke 观测 LIFE 基线 `segments_lost=0`）为本地证据，**不代表 Independent QA Gate 2 扩展 / Gate 3 前段验收**；QA 独立观察不豁免，尤其「接触→伤害→生命扣减→分离→再武装」玩家可玩路径须由 QA 独立判定。
 - **未替用户做产品/验收裁决；未替 Systems/UX/Tech/QA 代权；未触碰任何被禁止文档（CR 台账、合同、排程建议、C1 ledger、UX 清单等——未读写修改）。**
 - **self-test ≠ 玩家可玩输入证据:** self-test 为受脚本化零移动 + 脚本化射击 + 脚本化接触的确定性回归，已显式标注非玩家可玩；真实输入/接触体验由独立 QA 观察。
 - **无视觉 QA / E2E / 性能 / 导出 / 发布证据（如实）。** life 扣减的确定性运行时可观测性由 self-test 证明（`[CONTACT] damage victim_id=3 segments_lost=1` + READ-MODEL）；GDMCP runtime smoke 仅观测 LIFE 基线 `segments_lost=0` 非色彩呈现正常（注入时无活体可重叠，未触发新接触）。
