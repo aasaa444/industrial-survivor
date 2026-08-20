@@ -5,6 +5,8 @@
 > **Lifecycle:** `development governance / kickoff readiness preparation`
 >
 > **Contract type:** static UX/UI proposal for future review. It is not implementation authorization, a runtime result, visual QA, usability result, accessibility conformance result, or release acceptance.
+>
+> **Scope update (v0.1):** This document now includes **Part B (Gate 3 Visual/UI Preparation Contracts)** covering HUD layer hierarchy, focus safety protocol, card state machine, card visual feedback specification, and text/layout/accessibility specifications. Part A (general UX/UI contracts) and Part B (Gate 3 specific contracts) together form the complete kickoff readiness package for Gate 3 — Visual/UI.
 
 ## 1. Metadata, authority, and evidence boundary
 
@@ -237,10 +239,304 @@ Current open UX/UI decisions include exact hint copy and fade timing; card copy,
 - **Static deliverable:** this UX/UI contract package only.
 - **Files modified:** only `docs/ux/KICKOFF_UX_UI_CONTRACTS_v0_1.md`.
 - **No work claimed:** no Godot/GDMCP access, code, scenes, resources, assets, build, run, test, visual QA, usability study, accessibility audit, performance measurement, export, release, nested delegation, or implementation start.
-- **Closure-ready:** `yes` for this static UX/UI contract assignment; not a kickoff or acceptance-ready verdict.
-- **Next handoff:** Producer may include this package in kickoff-readiness review. Tech, Systems, Director, and Independent QA must review their respective dependencies before any future implementation gate.
+- **Closure-ready:** `yes` for this static UX/UI contract assignment (now includes Part B Gate 3 Visual/UI Preparation Contracts); not a kickoff or acceptance-ready verdict.
+- **Next handoff:** Producer may include this package in kickoff-readiness review. Tech, Systems, Director, and Independent QA must review their respective dependencies before any future implementation gate. Part B additions (sections §14–§19) are part of the Gate 3 readiness package and must be reviewed alongside Part A.
 
-## 14. Fresh UX/UI expert revalidation record — static handoff
+---
+
+# PART B — Gate 3 Visual/UI Preparation Contracts
+
+> **Purpose:** The following five sections (§14–§18) supply the explicit, structured specifications required for Gate 3 — Visual/UI readiness. They expand on the general contracts in Part A (§§3–9) with concrete layer definitions, protocol flows, state machines, visual feedback tokens, and layout/accessibility measurements. All values are `team_proposal` unless noted; exact thresholds, timing, and pixels remain `unresolved` pending implementation tuning and Director/QA review.
+
+## 14. HUD Layer Hierarchy (4 layers)
+
+The persistent HUD is organized into four layers, ordered by visual priority from foreground to background. Each layer has a distinct functional role and spatial zone to prevent occlusion of the combat-critical first read (player, danger, space).
+
+### 14.1 Layer definitions
+
+| Layer | Name | Content | Spatial zone (640x360) | Z-order | Notes |
+|---|---|---|---|---|---|
+| **L1** | **Critical status** | Life segments (3 segments). Timer (8-min run boundary). | Top-left corner. Anchored at (16, 12). Occupies roughly (16, 12) to (180, 50). | Foremost HUD layer. Always visible. | Must not be occluded by any other HUD layer or card panel. Non-color segment indicators required (filled/empty/dashed per segment). |
+| **L2** | **Phase indicator** | B2 phase label: current keyword phase (pre-`穿透` / `穿透` / `扇裂`). | Below L1. Approx. (16, 56) to (180, 80). | Second priority. | Text or icon + text. Phase transition must be readable before combat resumes after upgrade. |
+| **L3** | **Subordinate info** | XP/fragment count (two-upgrade intermediary). Kill count or other secondary stats if needed. | Below L2 or right-aligned. Approx. (16, 84) to (200, 120). | Third priority. | Minimized at all times. Must never compete with L1/L2 or combat readability. Muted visual treatment. |
+| **L4** | **Causal hint (transient)** | One extremely short movement-to-attack hint. Appears on entry, fades after first effective movement, once per run. | Bottom-center or above player. Exact position `unresolved`. | Transient overlay. | Not persistent. Fades once per run. Content, wording, placement, fade timing `unresolved`. |
+
+### 14.2 Cross-layer rules
+
+- L1 and L2 are always visible and persistent. L3 is persistent but visually subordinate. L4 is transient.
+- No layer may occlude the player silhouette, nearest danger, enemy tide, or clear/movable space during combat (per Charter §6.2 spatial hierarchy).
+- The card panel (upgrade selection) is not part of the persistent HUD. When active, it occupies the lower-center zone (per §15 card layout) and does not overlap L1/L2.
+- During terminal states (victory/defeat/result), a result label may temporarily elevate to L1 priority, but does not replace L1 — it appears in a non-overlapping zone.
+- Exact font sizes, iconography, background treatment, padding, and safe margins for each layer are `unresolved`.
+
+### 14.3 Widescreen behavior
+
+Per DC-PLAT-02 Option 2 (R03): fit + letterbox gaps + UI relative scaling; no stretch, no crop.
+
+| Aspect | HUD behavior |
+|---|---|
+| 16:9 (baseline) | Layout as specified above |
+| 16:10 | L1/L2/L3 anchor to top-left; vertical spacing increases proportionally; L4 repositions relative to player |
+| 21:9 | L1/L2/L3 remain top-left; additional horizontal margin prevents clipping on ultrawide; no stretching |
+
+Card dimensions remain fixed; only anchor positions adjust. HUD text size remains fixed at the baseline pixel value; no dynamic scaling of text.
+
+## 15. Focus Safety Protocol
+
+The focus safety protocol defines behavior when the game window loses or regains OS focus. It applies to both combat mode and upgrade-pause (card selection) mode. The protocol has four mandatory elements.
+
+### 15.1 Protocol elements
+
+| Element | Description | Contract |
+|---|---|---|
+| **1. Freeze** | On focus loss, the game must freeze immediately for the required scope. | Combat: all movement, attack cycles, enemy movement, contact damage, and XP accrual stop. No world progression occurs. Upgrade pause: card selection input stops; no card is confirmed, skipped, or changed. |
+| **2. Buffer** | During frozen state, all buffered input events are held but not processed. | No queued Enter/Space, no held key repeat, no mouse click queued before or during focus loss may be processed as a legal action after focus returns. Buffer is informational only; the buffer contents are discarded, not replayed. |
+| **3. Input clear** | On focus loss, all input state is invalidated. | Movement keys: released (virtual state). Card focus: preserved visually but input-mode reset to neutral. Confirmation keys (Enter/Space/1/2/3): cleared. Mouse position: no stale click state retained. |
+| **4. Fresh epoch** | On focus regain, only new, explicitly provided input is accepted. | The system must require a new explicit legal input epoch before resuming combat or confirming a card. The Enter/Space event that occurred before or during focus loss must not be replayed as confirmation (decision #17, PRECHARTER-09). |
+
+### 15.2 Mode-specific behavior
+
+| Mode | Freeze scope | Buffer behavior | Input clear scope | Fresh epoch requirement |
+|---|---|---|---|---|
+| **Combat** | All combat state frozen. Player position retained. Enemy positions and attack cycles frozen. Contact damage blocked. | Movement key state held but not applied. No attack/tick progression. | All held keys released virtually. Mouse position retained but click state cleared. | First new movement input after regain resumes combat. |
+| **Card selection (upgrade pause)** | Card selection frozen. Combat already paused. | No card confirmation or focus change processed. | Enter/Space cleared. Number key (1/2/3) state cleared. Arrow key state cleared. Mouse click state cleared. | First new directional or click input after regain re-engages card inspection. Previous focus/hover visual state is preserved for reference but not treated as active. |
+| **Terminal (victory/defeat/result)** | No combat to freeze. Result display frozen. | No restart or confirmation processed. | Restart/confirm input cleared. | First new input after regain triggers restart path. |
+
+### 15.3 Implementation direction (for Tech contract)
+
+- The exact mechanism for detecting focus loss/regain (Godot `focus_entered`/`focus_exited` signals on the main window or equivalent) is `unresolved`.
+- The epoch representation (integer counter, event ID, or equivalent) is `unresolved`.
+- The buffer-flushing semantics (discard buffered events vs. replay last legal event) must follow the contract above: **discard, never replay**.
+- Platform-specific behavior (e.g., macOS Mission Control, Windows Alt-Tab, Linux window manager focus) must be validated at Gate 3.
+- The focus epoch mechanism proposed in ADR-TECH-05 (increment on loss, increment on resume, discard prior-epoch events) is directionally aligned with this contract.
+
+### 15.4 Evidence targets
+
+| ID | Observation target | Acceptance example |
+|---|---|---|
+| UX-06 | Focus loss during combat freezes immediately | Runtime: Alt-Tab during combat; observe no enemy movement, no attack progression, no hidden progress after regain |
+| UX-07 | Focus loss during card selection preserves focus/selection | Runtime: Alt-Tab during upgrade pause; observe cards visible, no card silently changed/confirmed; stale Enter/Space after regain is rejected |
+| UX-08 | Fresh input epoch and stale rejection | Runtime: hold Enter before focus loss; after regain, Enter is rejected; only new press is accepted |
+
+## 16. Card State Machine
+
+The card state machine defines the lifecycle of a single card during upgrade selection. There are six discrete states. A card transitions through these states; only one state is active at any time.
+
+### 16.1 State definitions
+
+| State | Description | Visual signal | Input accepted | Transition triggers |
+|---|---|---|---|---|
+| **idle** | Card is visible but not focused or hovered. Default resting state after cards appear. | Dark fill, muted border (1px), normal text. Scale 1.0. | No (only focused/hovered card accepts input). | On cards appearing after pause transition. On hover/focus leaving this card. On another card gaining focus/hover. |
+| **hover** | Mouse cursor is over this card. Temporary visual inspection state. | Lightened fill, brightened border (1.5px, solid), slight scale increase (1.03). Cursor: pointing hand. | No direct confirmation (hover is inspection only; click triggers transition to pressed). | On `mouse_entered` signal. On `mouse_exited` returns to idle. On keyboard arrow press from this card returns to idle (keyboard takes priority). |
+| **pressed** | Player has confirmed selection (Enter/Space, click, or number key). Brief confirmation flash. Duration ~100ms. | Darkened fill, thick accent border (2px), scale decrease (0.97), bold text. | No (all input blocked during pressed + acquired feedback). | On valid confirmation input while this card is focused/hovered. |
+| **selected (acquired)** | After pressed phase, this card is the acquired choice. Visible feedback period ~600ms. | Accent fill, bright accent border (2px, solid), bold text + "获得" suffix. Scale returns to 1.0. | No (input still blocked). | On pressed timer completion. |
+| **transition_out** | Cards are being dismissed. Cards slide down and fade out. Duration ~200ms. | Opacity fading, position tweening downward (Y + 40px). | No (all input blocked). | On acquired feedback timer completion. |
+| **dimmed** | Sibling cards (the two not selected) during pressed/selected phases. | Darker fill, faded border (1px), muted text alpha, scale decrease (0.95). | No. | On any sibling card entering pressed state. |
+
+### 16.2 State transition diagram
+
+```
+                     cards appear
+                         |
+                         v
+    +--------- hover <---+---> idle <--- hover exit / arrow from this card
+    |            |        |        ^           |
+    |  mouse_    |        |        |           | arrow key / 1/2/3 from another card
+    |  entered   |        |        |           |
+    |            v        |        +-----------+
+    +--- [hover]  --------+                    
+    |            |                             
+    | click /    |  arrow key to another card  
+    | Enter/Space|                             
+    v            v                             
+ [pressed] (~100ms)                           
+    |                                          
+    v                                          
+ [selected / acquired] (~600ms)               
+    |                                          
+    v                                          
+ [transition_out] (~200ms)                    
+    |                                          
+    v                                          
+  (cards removed, combat resumes)             
+                                             
+Sibling cards:                                
+ [idle] ---> [dimmed] during pressed/selected 
+ [dimmed] ---> [idle] on transition_out complete
+```
+
+### 16.3 Keyboard focus vs. mouse hover distinction
+
+| Property | Keyboard focus | Mouse hover |
+|---|---|---|
+| Border style | **Dashed** | **Solid** |
+| Border color | Accent (blue-white) | Brightened neutral |
+| Scale | 1.03 | 1.03 |
+| Cursor | Default | Pointing hand |
+| Priority rule | Arrow key press overrides hover. | Mouse movement overrides keyboard focus. |
+| Persistence through focus loss | Focus visual preserved; input cleared. | Hover visual preserved; input cleared. |
+
+### 16.4 Cross-state rules
+
+- Only one card may be in pressed/selected state at a time.
+- Only one card may have keyboard focus at a time. Only one card may have mouse hover at a time.
+- During pressed and selected states, all input is blocked system-wide (not just per-card). A `_card_input_guarded` flag governs this.
+- The 1/2/3 number keys act as direct-select (same as Enter/Space on the corresponding card) and bypass the focus state entirely.
+- Cards 1/2/3 correspond to left/center/right positions respectively.
+
+## 17. Card Visual Feedback Specification
+
+### 17.1 Color tokens (directional, not frozen)
+
+All colors are `team_proposal` candidate values. Exact final values are `unresolved` pending Director/Technical Art review and Anchor v0.1 coherence check.
+
+| Token | RGBA | Usage |
+|---|---|---|
+| `card_bg_default` | Color(0.08, 0.08, 0.10, 0.85) | Card background at idle |
+| `card_bg_hover` | Color(0.12, 0.12, 0.16, 0.90) | Card background on hover |
+| `card_bg_pressed` | Color(0.04, 0.04, 0.06, 0.95) | Card background on pressed |
+| `card_bg_acquired` | Color(0.10, 0.15, 0.22, 0.90) | Card background when selected/acquired |
+| `card_bg_dimmed` | Color(0.04, 0.04, 0.06, 0.70) | Sibling card background when dimmed |
+| `card_border_default` | Color(0.30, 0.30, 0.35) | Muted resting border |
+| `card_border_hover` | Color(0.50, 0.50, 0.60) | Brightened hover border |
+| `card_border_focus` | Color(0.55, 0.75, 0.95) | Keyboard focus accent border |
+| `card_border_pressed` | Color(0.65, 0.85, 1.0) | Pressed accent border |
+| `card_border_acquired` | Color(0.70, 0.90, 1.0) | Bright accent for acquired card |
+| `card_border_dimmed` | Color(0.15, 0.15, 0.20) | Faded sibling border |
+| `hint_color_muted` | (directional, `unresolved`) | Subordinate info text (XP, etc.) |
+
+### 17.2 Non-color feedback matrix
+
+Per decision #19 and UX-13: every state transition must be distinguishable without relying on color alone.
+
+| Transition | Non-color signal 1 | Non-color signal 2 | Non-color signal 3 |
+|---|---|---|---|
+| idle -> hover | Scale: 1.0 -> 1.03 | Border width: 1px -> 1.5px | Cursor: default -> pointing hand |
+| hover -> focus | Border style: solid -> dashed | Cursor: pointing hand -> default | (border color change is supplemental, not primary) |
+| idle/hover -> pressed | Scale: 1.0/1.03 -> 0.97 | Border width: 1px/1.5px -> 2px | Text weight: normal -> bold |
+| pressed -> selected (acquired) | Text suffix: "+ 获得" appended | Border style: any -> solid | Scale: 0.97 -> 1.0 (spring back) |
+| any -> dimmed (sibling) | Alpha reduction on entire card | Scale: -> 0.95 | Text opacity: muted |
+| transition_out | Position tween (Y + 40px) | Opacity: 1.0 -> 0.0 | Scale: maintained (no change during dismiss) |
+
+### 17.3 Transition timing budget
+
+| Phase | Duration | Easing | Interruptible? |
+|---|---|---|---|
+| Cards appear (transition_in) | ~200ms | ease-out (expo) | No |
+| Hover enter/exit | ~100ms | ease-out | Yes (fast hover) |
+| Pressed flash | ~100ms | ease-in | No |
+| Acquired feedback display | ~600ms | flat hold | No |
+| Cards dismiss (transition_out) | ~200ms | ease-in (expo) | No |
+| **Total non-interactive** | **~1100ms** | | From press to combat resume |
+
+All timings are candidate values subject to implementation tuning. No animation may produce sustained high-frequency flashing or obscure player/danger/space.
+
+### 17.4 Acquired feedback text
+
+- Card title line: `[N] 穿透 I` -> `[N] 穿透 I -- 获得`
+- Prompt line: `"B2 upgrade selection -- ..."` -> `"穿透 已获得"` or `"扇裂 已获得"`
+- The "获得" suffix is the primary non-color confirmation signal.
+
+## 18. Text, Layout, and Accessibility Specifications
+
+### 18.1 Text hierarchy and sizing
+
+| Text element | Role | Proposed size | Weight | Alignment | Notes |
+|---|---|---|---|---|---|
+| **Card Tier 1 (keyword)** | Card title (e.g., "穿透 I") | 18px | Bold | Left-aligned, top of card | Largest text on card; immediate recognition |
+| **Card Tier 2 (difference)** | One clear difference dimension | 14px | Regular | Left-aligned, middle of card | Key decision signal |
+| **Card Tier 3 (effect)** | Mechanical effect description | 12px | Regular (muted) | Left-aligned, bottom of card | Supporting detail; lowest priority |
+| **Card keyboard hint** | "[1]" / "[2]" / "[3]" number prefix | 18px (same as Tier 1) | Regular | Precedes keyword text | Always visible; keyboard shortcut indicator |
+| **HUD L1 life** | Segment indicator | `unresolved` | `unresolved` | Top-left | Non-color: filled/empty/dashed per segment |
+| **HUD L1 timer** | Run timer display | `unresolved` | `unresolved` | Top-left, adjacent to life | |
+| **HUD L2 phase** | B2 phase label | `unresolved` | `unresolved` | Below L1 | Current keyword phase |
+| **HUD L3 subordinate** | XP/fragments, secondary stats | Muted size | Light weight | Below L2 | Visually subordinate; muted color |
+| **Prompt text** | Card selection instruction | 13px | Regular | Centered below cards | Fades in/out with cards |
+| **Result text** | Victory/defeat/result label | `unresolved` | Bold | `unresolved` | Terminal state priority; non-color distinction |
+| **Hint text** | Causal movement hint | `unresolved` | `unresolved` | `unresolved` | Transient; appears once per run |
+
+### 18.2 Layout zones (640x360 baseline)
+
+```
++----------------------------------------------------------+
+|  [L1: LIFE + TIMER]                      16:9 baseline   |
+|  [L2: B2 PHASE]                                        |
+|  [L3: XP/subordinate]                                  |
+|                                                            |
+|                  [GAMEPLAY ZONE]                          |
+|              (player, enemies, attacks,                  |
+|               attacks, danger, space)                    |
+|                  player center ~(320, 180)                |
+|                                                            |
+|    +----------+    +----------+    +----------+           |
+|    |  Card 1  |    |  Card 2  |    |  Card 3  |           |
+|    |  [1] 穿透|    |  [2] 穿透|    |  [3] 穿透|           |
+|    +----------+    +----------+    +----------+           |
+|                  [prompt text]                             |
++----------------------------------------------------------+
+```
+
+**Zone definitions (640x360):**
+
+| Zone | Bounds (approx.) | Purpose |
+|---|---|---|
+| HUD L1 (top-left) | (16, 12) to (180, 50) | Critical status: life + timer |
+| HUD L2 | (16, 56) to (180, 80) | Phase indicator |
+| HUD L3 | (16, 84) to (200, 120) | Subordinate info |
+| Gameplay | Center and upper 60% | Player, enemies, attacks, danger, space |
+| Card panel | Bottom-center. Cards at Y center ~270. Card bottom at Y=318. | Upgrade selection (only during upgrade pause) |
+| Prompt | Below cards, Y ~332, centered | Card selection instruction |
+| Hint (transient) | `unresolved` | Causal movement hint (L4, transient) |
+
+### 18.3 Card layout measurements (640x360 baseline)
+
+| Property | Value | Rationale |
+|---|---|---|
+| Card width | 160px | 3 cards + 2 gaps fit within 640px with safe margins |
+| Card height | 96px | Accommodates 3 text lines + padding |
+| Card gap | 20px | Clear separation; 3x160 + 2x20 = 520px total |
+| Card vertical center Y | 270px | Lower 35% of screen; does not overlap HUD or player |
+| Card corner radius | 4px | Restrained industrial feel per Anchor |
+| Card internal padding | 12px horizontal, 10px vertical | |
+| Card bottom edge | Y = 318 | 42px margin to viewport bottom |
+
+### 18.4 Spatial occlusion safety rules
+
+- **First read (combat):** player silhouette, nearest danger, enemy tide, clear/movable space. Never occluded by HUD or card panel.
+- **Second read:** attack result, hit/kill feedback, changed route. Never occluded.
+- **Third read:** persistent HUD (L1/L2). Never occluded by card panel.
+- **Fourth read:** subordinate info (L3), transient hint (L4). May be temporarily occluded by card panel during upgrade, but card panel only appears during full combat pause.
+- Card panel zone is bottom-center, Y range ~222-318. Player (Y~180) and typical enemy positions are in the upper 60%. **No overlap** between card zone and gameplay zone.
+
+### 18.5 Accessibility specification
+
+| Requirement | Direction | Status | Notes |
+|---|---|---|---|
+| **Non-color communication** | Every state transition uses at least 2 non-color signals (scale, border width, border style, text suffix, alpha, cursor) | `team_proposal` (see §17.2) | Decision #19; validated against UX-13 |
+| **Keyboard-only full path** | 1/2/3 direct selection + arrow keys + Enter/Space confirm. Full parity with mouse. | `team_proposal` (see §16) | No gamepad promise (decision #2) |
+| **Mouse-only full path** | Hover to inspect, click to confirm. Full parity with keyboard. | `team_proposal` (see §16) | |
+| **Focus visibility** | Keyboard focus uses dashed border; visually distinct from hover (solid border) | `team_proposal` (see §16.3) | Must be tested across supported aspects |
+| **Text readability** | Minimum 12px for smallest text; sufficient contrast against dark backgrounds | `team_proposal` | Exact contrast ratio `unresolved` (future CR) |
+| **No rapid flashing** | All transitions >= 80ms; no blinking, strobing, or sustained high-frequency flashing | `team_proposal` | Per decision #19 |
+| **Stale input rejection** | Input guarded during transition phases; held keys do not repeat-select | `team_proposal` (see §15) | |
+| **Focus-loss safety** | Freeze, buffer, input clear, fresh epoch per §15 protocol | `team_proposal` (see §15) | UX-06/07/08 evidence targets |
+| **Safe area / scaling** | fit + letterbox gaps + UI relative scaling per DC-PLAT-02 Option 2; no stretch, no crop | `user_confirmed (direction)` | `1280x720` minimum resolution remains candidate only |
+| **Responsive layout** | HUD anchored to corners; cards centered; text fixed pixel size; no dynamic text scaling | `team_proposal` | Exact scaling tiers `unresolved` |
+| **Reduced motion** | Not yet specified. All transitions are short (<600ms) and purposeful. Reduced-motion policy is `unresolved`. | `unresolved` | Future CR if needed |
+| **Minimum target size** | Card interaction targets are 160x96px (well above typical minimums). HUD click targets are not yet defined. | `team_proposal` | Exact minimum target size threshold `unresolved` |
+
+### 18.6 Gate 3 evidence requirements for visual/UI readiness
+
+| ID | Evidence target | Evidence class | Required fields |
+|---|---|---|---|
+| UX-09 | HUD life/timer/B2 persistent; XP subordinate; no occlusion at named aspects {16:9, 16:10, 21:9} | visual QA + runtime | aspect/resolution, state, screenshot/frame, observer, verdict |
+| UX-10 | Victory/defeat non-color-distinct, short, restart | runtime + visual QA + QA | terminal trigger, result frames, timing, reset identity, observer |
+| UX-12 | Common widescreen readability and safe-area behavior | visual QA + QA | named aspect/resolution, build/config, frames, clipping/overlap notes |
+| UX-13 | Accessibility: focus, text/cards, non-color states, restrained motion | visual QA + QA | target settings, state coverage, frame refs, checklist, verdict |
+
+---
+
+## 19. Fresh UX/UI expert revalidation record — static handoff
 
 - **Role expert:** `godot-ux-ui-expert` — loaded successfully before project/design content was read; this record is authored by the newly assigned direct UX/UI member.
 - **Expert preflight:** target player/context, critical journey, comprehension risks, 16:9/common-widescreen and keyboard/mouse conditions, in-scope states, evidence route, ownership boundary, and static-only stop condition are recorded in §1.2 and remain valid.
