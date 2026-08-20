@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://rrqthqcnkxlr"]
+
+[ext_resource type="Script" uid="uid://bxcwgoxp8v5p7" path="res://qa/qa_runtime_seam.gd" id="1_1icu4"]
+
+[node name="qa_runtime_seam" type="Node2D" unique_id=876764694]
+script = ExtResource("1_1icu4")

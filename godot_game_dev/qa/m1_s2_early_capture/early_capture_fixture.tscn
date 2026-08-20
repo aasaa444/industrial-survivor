@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://hms5mry7t7rm"]
+
+[ext_resource type="Script" uid="uid://dqtslyxs5cbs" path="res://qa/m1_s2_early_capture/early_capture_fixture.gd" id="1_nyv7o"]
+
+[node name="early_capture_fixture" type="Node2D" unique_id=192868803]
+script = ExtResource("1_nyv7o")

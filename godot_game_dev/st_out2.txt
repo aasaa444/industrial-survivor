@@ -1,0 +1,128 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[SELF-TEST] restricted deterministic regression (scripted zero-move + scripted fire; NOT player-playable input evidence)
+[TIMING][GRACE] tick=1 remaining=0.854s; presentation-only
+[READ-MODEL] attack: idle | kill: none | feedback: - (quiet) |  | contact: none
+[TIMING][GRACE] tick=2 remaining=0.750s; presentation-only
+[TIMING][GRACE] tick=3 remaining=0.695s; presentation-only
+[TIMING][GRACE] tick=4 remaining=0.644s; presentation-only
+[TIMING][GRACE] tick=5 remaining=0.587s; presentation-only
+[TIMING][GRACE] tick=6 remaining=0.535s; presentation-only
+[TIMING][GRACE] tick=7 remaining=0.481s; presentation-only
+[TIMING][GRACE] tick=8 remaining=0.427s; presentation-only
+[TIMING][GRACE] tick=9 remaining=0.385s; presentation-only
+[TIMING][GRACE] tick=10 remaining=0.367s; presentation-only
+[TIMING][GRACE] tick=11 remaining=0.335s; presentation-only
+[TIMING][GRACE] tick=12 remaining=0.312s; presentation-only
+[TIMING][GRACE] tick=13 remaining=0.285s; presentation-only
+[TIMING][GRACE] tick=14 remaining=0.262s; presentation-only
+[TIMING][GRACE] tick=15 remaining=0.235s; presentation-only
+[TIMING][GRACE] tick=16 remaining=0.211s; presentation-only
+[TIMING][GRACE] tick=17 remaining=0.186s; presentation-only
+[TIMING][GRACE] tick=18 remaining=0.159s; presentation-only
+[TIMING][GRACE] tick=19 remaining=0.110s; presentation-only
+[TIMING][GRACE] tick=20 remaining=0.077s; presentation-only
+[TIMING][GRACE] tick=21 remaining=0.035s; presentation-only
+[TIMING][GRACE] tick=22 remaining=0.002s; presentation-only
+[TIMING][GRACE-END] tick=23 elapsed=1.000s; combat/session.step now permitted
+[AUTO-ATTACK] locked id=1
+[TIMING][LOCK] tick=23 resolve_delay=0.250s; resolve blocked
+[LOCK-REFRESH] player=(320,360) lock=[1, 2] (movement re-locks NEXT refresh; current shot snapshot immutable)
+[FB-BIND] lock=[1, 2] (emitted only while target_snapshot_ids non-empty)
+[READ-MODEL] attack: resolving | kill: none | feedback: lock=2 hit=0 kill=0 (bound: target_snapshot_ids/hit_results/kill_outcomes) |  | contact: none
+[TIMING][DELAY] tick=24 remaining=0.116s; resolve blocked
+[READ-MODEL] attack: resolving | kill: none | feedback: - (quiet) |  | contact: none
+[TIMING][DELAY] tick=25 remaining=0.048s; resolve blocked
+[TIMING][DELAY] tick=26 remaining=0.026s; resolve blocked
+[TIMING][DELAY-END] tick=27 elapsed=0.250s; resolve now permitted
+[AUTO-ATTACK] locked id=1
+[FB-BIND] lock=[1, 2] (emitted only while target_snapshot_ids non-empty)
+[FB-BIND] hit=[1, 2] (emitted only while hit_results non-empty)
+[HIT] target id=1
+[HIT] target id=2
+[FB-BIND] kill=[1, 2] (emitted only while kill_outcomes non-empty)
+[KILL] id=1 died -> kill tween (scale+fade)
+[CLEAR] enemy id=1 cleared from play
+[KILL] id=2 died -> kill tween (scale+fade)
+[CLEAR] enemy id=2 cleared from play
+[RUNTIME] live enemies=0
+[READ-MODEL] attack: resolved | kill: killed(2) | feedback: lock=2 hit=2 kill=2 (bound: target_snapshot_ids/hit_results/kill_outcomes) |  | contact: none
+[SELF-TEST] kill_outcomes=[1, 2]
+[NO-TARGET-CUE] quiet episode begins (one-shot restrained non-color cue; bound no_target_branch)
+[READ-MODEL] attack: no_target (quiet) | kill: killed(2) | feedback: - (quiet) |  | contact: none
+[SELF-TEST-CLEAR] enemies removed; live enemies=0 (clear visible)
+[SELF-TEST-CONTACT] overlapping enemy placed on player (contact regression begins)
+[AUTO-ATTACK] locked id=1
+[FB-BIND] lock=[1, 2] (emitted only while target_snapshot_ids non-empty)
+[FB-BIND] hit=[1, 2] (emitted only while hit_results non-empty)
+[HIT] target id=1
+[HIT] target id=2
+[FB-BIND] kill=[1, 2] (emitted only while kill_outcomes non-empty)
+[KILL] id=1 died -> kill tween (scale+fade)
+[CLEAR] enemy id=1 cleared from play
+[KILL] id=2 died -> kill tween (scale+fade)
+[CLEAR] enemy id=2 cleared from play
+[RUNTIME] live enemies=1
+[CONTACT] damage victim_id=3 segments_lost=1
+[CONTACT-INVULN] brief invulnerability entered (no repeat damage during protection)
+[READ-MODEL] attack: resolved | kill: killed(2) | feedback: lock=2 hit=2 kill=2 (bound: target_snapshot_ids/hit_results/kill_outcomes) |  | contact: damage(victim=3 segments_lost=1)
+[CONTACT-SEPARATE] victim_id=3 player=(320,334) (light separation; candidate mag 26)
+[AUTO-ATTACK] locked id=1
+[FB-BIND] lock=[1, 2] (emitted only while target_snapshot_ids non-empty)
+[FB-BIND] hit=[1, 2] (emitted only while hit_results non-empty)
+[HIT] target id=1
+[HIT] target id=2
+[FB-BIND] kill=[1, 2] (emitted only while kill_outcomes non-empty)
+[KILL] id=1 died -> kill tween (scale+fade)
+[CLEAR] enemy id=1 cleared from play
+[KILL] id=2 died -> kill tween (scale+fade)
+[CLEAR] enemy id=2 cleared from play
+[RUNTIME] live enemies=1
+[CONTACT-REARM] re-armed ids=[3] (separation ended invulnerability; future contact legal)
+[READ-MODEL] attack: resolved | kill: killed(2) | feedback: lock=2 hit=2 kill=2 (bound: target_snapshot_ids/hit_results/kill_outcomes) |  | contact: rearm([3])
+[AUTO-ATTACK] locked id=1
+[FB-BIND] lock=[1, 2] (emitted only while target_snapshot_ids non-empty)
+[FB-BIND] hit=[1, 2] (emitted only while hit_results non-empty)
+[HIT] target id=1
+[HIT] target id=2
+[FB-BIND] kill=[1, 2] (emitted only while kill_outcomes non-empty)
+[KILL] id=1 died -> kill tween (scale+fade)
+[CLEAR] enemy id=1 cleared from play
+[KILL] id=2 died -> kill tween (scale+fade)
+[CLEAR] enemy id=2 cleared from play
+[RUNTIME] live enemies=1
+[READ-MODEL] attack: resolved | kill: killed(2) | feedback: lock=2 hit=2 kill=2 (bound: target_snapshot_ids/hit_results/kill_outcomes) |  | contact: none
+[AUTO-ATTACK] locked id=1
+[FB-BIND] lock=[1, 2] (emitted only while target_snapshot_ids non-empty)
+[FB-BIND] hit=[1, 2] (emitted only while hit_results non-empty)
+[HIT] target id=1
+[HIT] target id=2
+[FB-BIND] kill=[1, 2] (emitted only while kill_outcomes non-empty)
+[KILL] id=1 died -> kill tween (scale+fade)
+[CLEAR] enemy id=1 cleared from play
+[KILL] id=2 died -> kill tween (scale+fade)
+[CLEAR] enemy id=2 cleared from play
+[RUNTIME] live enemies=1
+[SELF-TEST-CONTACT-PASS] segments_lost=1 (exactly one contact damage; overlap no repeat; life deducted)
+[AUTO-ATTACK] locked id=3
+[TIMING][LOCK] tick=33 resolve_delay=0.250s; resolve blocked
+[LOCK-REFRESH] player=(320,334) lock=[3] (movement re-locks NEXT refresh; current shot snapshot immutable)
+[FB-BIND] lock=[3] (emitted only while target_snapshot_ids non-empty)
+[FB-BIND] hit=[1, 2] (emitted only while hit_results non-empty)
+[HIT] target id=1
+[HIT] target id=2
+[FB-BIND] kill=[1, 2] (emitted only while kill_outcomes non-empty)
+[KILL] id=1 died -> kill tween (scale+fade)
+[CLEAR] enemy id=1 cleared from play
+[KILL] id=2 died -> kill tween (scale+fade)
+[CLEAR] enemy id=2 cleared from play
+[RUNTIME] live enemies=1
+[READ-MODEL] attack: resolved | kill: killed(2) | feedback: lock=1 hit=2 kill=2 (bound: target_snapshot_ids/hit_results/kill_outcomes) |  | contact: none
+[SELF-TEST-TERMINAL] driving life depletion -> defeat via scripted direct session.step (terminal regression begins)
+[TERMINAL] outcome=defeat (life depletion; short light-interruption result)
+[SELF-TEST-DEPLETED] segments_lost=3 outcome=defeat (life depleted -> rules arbitrates defeat)
+[SELF-TEST-RESULT] defeat result entered (input locked; readable non-color RESULT)
+[TERMINAL-AUTO-RESTART] canonical reset -> new run; segments_lost=0 (no cross-run loss)
+[READ-MODEL] attack: idle | kill: none | feedback: - (quiet) |  | contact: none
+[NO-TARGET-CUE] quiet episode begins (one-shot restrained non-color cue; bound no_target_branch)
+[READ-MODEL] attack: no_target (quiet) | kill: none | feedback: - (quiet) |  | contact: none

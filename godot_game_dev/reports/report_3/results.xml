@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites id="2026-08-17" name="report_3" tests="60" failures="0" skipped="0" flaky="0" time="0.000">
+	<testsuite id="0" name="adapter_contract_test" package="test" timestamp="2026-08-17T12:19:38" hostname="localhost" tests="26" failures="0" errors="0" skipped="0" flaky="0" time="0.187">
+		<testcase name="test_input_w_up_moves_up" classname="adapter_contract_test" time="0.005">
+		</testcase>
+		<testcase name="test_input_arrow_up_moves_up" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_input_s_down_a_left_d_right" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_input_diagonal_and_none" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_input_is_pure_and_deterministic" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_pick_task_refresh_when_unlocked" classname="adapter_contract_test" time="0.005">
+		</testcase>
+		<testcase name="test_pick_task_resolve_when_locked_in_epoch" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_make_envelope_carries_movement_and_candidates" classname="adapter_contract_test" time="0.003">
+		</testcase>
+		<testcase name="test_feedback_lock_only_when_target_locked" classname="adapter_contract_test" time="0.005">
+		</testcase>
+		<testcase name="test_feedback_hit_bound_to_hit_results" classname="adapter_contract_test" time="0.006">
+		</testcase>
+		<testcase name="test_feedback_kill_bound_to_kill_outcomes" classname="adapter_contract_test" time="0.005">
+		</testcase>
+		<testcase name="test_feedback_empty_shot_no_forgery" classname="adapter_contract_test" time="0.003">
+		</testcase>
+		<testcase name="test_feedback_no_hit_then_locked_only" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_adapter_candidates_feed_core_ordering" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_adapters_envelope_drives_core_lock" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_movement_intent_does_not_change_rules_semantics" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_movement_causality_next_refresh_relocks" classname="adapter_contract_test" time="0.005">
+		</testcase>
+		<testcase name="test_same_geometry_same_lock_across_runs" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_contact_observations_filters_overlaps" classname="adapter_contract_test" time="0.005">
+		</testcase>
+		<testcase name="test_contact_observations_empty_when_no_overlap" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_make_envelope_carries_contact_input_and_params" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_contact_feedback_bound_to_events" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_contact_feedback_empty_when_no_contact_event" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_make_envelope_carries_terminal_input" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_terminal_feedback_bound_to_events" classname="adapter_contract_test" time="0.004">
+		</testcase>
+		<testcase name="test_terminal_feedback_empty_when_no_terminal_event" classname="adapter_contract_test" time="0.004">
+		</testcase>
+	</testsuite>
+	<testsuite id="1" name="rules_core_test" package="test" timestamp="2026-08-17T12:19:38" hostname="localhost" tests="34" failures="0" errors="0" skipped="0" flaky="0" time="0.288">
+		<testcase name="test_target_tie_stable_id_decides" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_target_tie_k1_dominates_k2" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_target_container_order_independent" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_target_no_target_branch" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_target_removal_no_hit_and_invalidation_event" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_target_float_epsilon_same_seed_consistency" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_session_reset_is_clean_and_deterministic" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_kill_single_hit_kills_enemy" classname="rules_core_test" time="0.009">
+		</testcase>
+		<testcase name="test_kill_candidate_without_hp_defaults_to_one" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_kill_multi_targets_multi_hit" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_kill_death_removal_no_ghost_hit" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_kill_removed_target_produces_no_hit_and_no_kill" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_target_order_unchanged_by_enemy_lifetime_fields" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_session_kill_cycle_then_reset_clean" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_kill_single_container_order_variant" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_kill_multi_container_order_variant" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_kill_death_removal_container_order_variant" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_diagnostics_kill_decision_trace_exported" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_diagnostics_candidate_key_trace_and_no_kill_resolve" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_contact_single_exactly_one_damage_and_invuln" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_contact_overlap_no_repeat_damage_rearm_false" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_contact_separate_rearm_exactly_one_new_legal_event" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_contact_simultaneous_single_damage_event_merged" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_contact_boundary_separation_and_recoverable" classname="rules_core_test" time="0.006">
+		</testcase>
+		<testcase name="test_contact_removal_during_protection_cleans_state" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_contact_absent_preserves_existing_semantics" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_terminal_life_depletion_first_same_frame" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_terminal_victory_control_completion" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_terminal_defeat_light_interruption" classname="rules_core_test" time="0.004">
+		</testcase>
+		<testcase name="test_terminal_result_lock_no_rearbitration" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_terminal_stale_input_rejected" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_reset_auto_restart_task" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_reset_no_cross_run_loss" classname="rules_core_test" time="0.005">
+		</testcase>
+		<testcase name="test_terminal_absent_preserves_existing_semantics" classname="rules_core_test" time="0.004">
+		</testcase>
+	</testsuite>
+</testsuites>

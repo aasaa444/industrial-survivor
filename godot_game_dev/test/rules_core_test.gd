@@ -171,7 +171,7 @@ func test_kill_single_hit_kills_enemy() -> void:
 		]}, st0, 20)
 	assert_array(refresh["state"]["target_snapshot_ids"]).is_equal([1])
 
-	var res: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, refresh["state"], 21)
+	var res: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, refresh["state"], 21)
 	var st: Dictionary = res["state"]
 	assert_bool(st["hit_results"].has(1)).is_true()
 	assert_bool(st["kill_outcomes"].has(1)).is_true()
@@ -197,7 +197,7 @@ func test_kill_candidate_without_hp_defaults_to_one() -> void:
 		{"task": "refresh_fire", "live_candidates": [
 			{"stable_id": 3, "k1_bucket": 0, "k2_bucket": 0, "alive": true},
 		]}, st0, 30)
-	var res: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, refresh["state"], 31)
+	var res: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, refresh["state"], 31)
 	assert_bool(res["state"]["hit_results"].has(3)).is_true()
 	assert_bool(res["state"]["kill_outcomes"].has(3)).is_true()
 
@@ -214,13 +214,13 @@ func test_kill_multi_targets_multi_hit() -> void:
 	assert_array(refresh["state"]["target_snapshot_ids"]).is_equal([1, 2])
 
 	# Shot 1: both hit, hp 2 -> 1, neither dies.
-	var shot1: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, refresh["state"], 41)
+	var shot1: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, refresh["state"], 41)
 	assert_bool(shot1["state"]["kill_outcomes"].is_empty()).is_true()
 	var hp1: int = int(shot1["state"]["live_candidates"][0]["hp"])
 	assert_int(hp1).is_equal(1)
 
 	# Shot 2 on the SAME locked snapshot: both hit again, hp 1 -> 0, both die.
-	var shot2: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, shot1["state"], 42)
+	var shot2: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, shot1["state"], 42)
 	assert_bool(shot2["state"]["kill_outcomes"].has(1)).is_true()
 	assert_bool(shot2["state"]["kill_outcomes"].has(2)).is_true()
 
@@ -237,7 +237,7 @@ func test_kill_death_removal_no_ghost_hit() -> void:
 		]}, st0, 50)
 
 	# Shot 1: both lock ids resolve; target 1 dies, target 2 takes a hit but survives.
-	var shot1: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, refresh["state"], 51)
+	var shot1: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, refresh["state"], 51)
 	assert_bool(shot1["state"]["hit_results"].has(1)).is_true()
 	assert_bool(shot1["state"]["hit_results"].has(2)).is_true()
 	assert_bool(shot1["state"]["kill_outcomes"].has(1)).is_true()
@@ -262,7 +262,7 @@ func test_kill_death_removal_no_ghost_hit() -> void:
 	assert_array(refresh2["state"]["target_snapshot_ids"]).is_equal([2])
 
 	# A subsequent resolve over that new snapshot hits only the live target (no ghost hit for the dead id).
-	var shot2: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, refresh2["state"], 53)
+	var shot2: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, refresh2["state"], 53)
 	assert_bool(shot2["state"]["hit_results"].has(2)).is_true()
 	assert_bool(shot2["state"]["hit_results"].has(1)).is_false()
 	assert_bool(shot2["state"]["kill_outcomes"].has(1)).is_false()
@@ -316,7 +316,7 @@ func test_session_kill_cycle_then_reset_clean() -> void:
 	s.step({"task": "refresh_fire", "live_candidates": [
 		{"stable_id": 1, "k1_bucket": 0, "k2_bucket": 0, "alive": true, "hp": 1}]})
 	s.advance_tick()
-	s.step({"task": "resolve", "attack_damage": 1})
+	s.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1})
 	assert_bool(s.rules_state["kill_outcomes"].has(1)).is_true()
 	assert_bool(s.rules_state["hit_results"].has(1)).is_true()
 
@@ -356,8 +356,8 @@ func test_kill_single_container_order_variant() -> void:
 	assert_array(ref_a["state"]["target_snapshot_ids"]).is_equal([2, 1])
 	assert_array(ref_b["state"]["target_snapshot_ids"]).is_equal([2, 1])
 	# One-shot kill behavior identical across insertion orders: id2 (hp=5) survives, id... (both hit; only hp<=0 dies)
-	var shot_a: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, ref_a["state"], 73)
-	var shot_b: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, ref_b["state"], 74)
+	var shot_a: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, ref_a["state"], 73)
+	var shot_b: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, ref_b["state"], 74)
 	assert_bool(shot_a["state"]["kill_outcomes"].has(1)).is_true()
 	assert_bool(shot_b["state"]["kill_outcomes"].has(1)).is_true()
 	assert_bool(shot_a["state"]["kill_outcomes"].has(2)).is_false()
@@ -379,13 +379,13 @@ func test_kill_multi_container_order_variant() -> void:
 	assert_array(ref_a["state"]["target_snapshot_ids"]).is_equal([1, 2])
 	assert_array(ref_b["state"]["target_snapshot_ids"]).is_equal([1, 2])
 	# shot 1: both step to hp=1, no kills (both orders identical).
-	var s1a: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, ref_a["state"], 82)
-	var s1b: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, ref_b["state"], 83)
+	var s1a: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, ref_a["state"], 82)
+	var s1b: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, ref_b["state"], 83)
 	assert_bool(s1a["state"]["kill_outcomes"].is_empty()).is_true()
 	assert_bool(s1b["state"]["kill_outcomes"].is_empty()).is_true()
 	# shot 2 on the SAME locked snapshot: both die (identical across orders).
-	var s2a: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, s1a["state"], 84)
-	var s2b: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, s1b["state"], 85)
+	var s2a: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, s1a["state"], 84)
+	var s2b: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, s1b["state"], 85)
 	assert_bool(s2a["state"]["kill_outcomes"].has(1)).is_true()
 	assert_bool(s2a["state"]["kill_outcomes"].has(2)).is_true()
 	assert_bool(s2b["state"]["kill_outcomes"].has(1)).is_true()
@@ -407,8 +407,8 @@ func test_kill_death_removal_container_order_variant() -> void:
 	var ref_b: Dictionary = RULES.step({"task": "refresh_fire", "live_candidates": set_b}, RULES.empty_state(), 91)
 	assert_array(ref_a["state"]["target_snapshot_ids"]).is_equal([1, 2])
 	assert_array(ref_b["state"]["target_snapshot_ids"]).is_equal([1, 2])
-	var shot_a: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, ref_a["state"], 92)
-	var shot_b: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, ref_b["state"], 93)
+	var shot_a: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, ref_a["state"], 92)
+	var shot_b: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, ref_b["state"], 93)
 	assert_bool(shot_a["state"]["kill_outcomes"].has(1)).is_true()
 	assert_bool(shot_b["state"]["kill_outcomes"].has(1)).is_true()
 	assert_bool(shot_a["state"]["kill_outcomes"].has(2)).is_false()
@@ -441,7 +441,7 @@ func test_diagnostics_kill_decision_trace_exported() -> void:
 			{"stable_id": 1, "k1_bucket": 0, "k2_bucket": 2, "alive": true, "hp": 1},
 			{"stable_id": 2, "k1_bucket": 0, "k2_bucket": 1, "alive": true, "hp": 1},
 		]}, st0, 100)
-	var shot: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, refresh["state"], 101)
+	var shot: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, refresh["state"], 101)
 	var d: Dictionary = shot["diagnostics"]
 	var trace: Array = d["kill_decision_trace"]
 	assert_array(trace).has_size(2)
@@ -485,7 +485,7 @@ func test_diagnostics_candidate_key_trace_and_no_kill_resolve() -> void:
 	assert_int(int(ctr[2]["k1_bucket"])).is_equal(1)
 	assert_int(int(ctr[2]["k2_bucket"])).is_equal(3)
 	# No kill on this resolve (hp=5, damage 1): kill trace empty, live reduction 0, state untouched hit semantics.
-	var shot: Dictionary = RULES.step({"task": "resolve", "attack_damage": 1}, refresh["state"], 111)
+	var shot: Dictionary = RULES.step({"task": "resolve", "attack_max_targets": 999, "attack_damage": 1}, refresh["state"], 111)
 	var d_shot: Dictionary = shot["diagnostics"]
 	assert_array(d_shot["kill_decision_trace"]).is_empty()
 	assert_int(int(d_shot["live_reduction_count"])).is_equal(0)
@@ -703,3 +703,249 @@ func test_contact_absent_preserves_existing_semantics() -> void:
 		if e["type"] == "contact_damage_event":
 			dmg += 1
 	assert_int(dmg).is_equal(0)
+
+# ============================ T3 TERMINAL-* / RESET-* fixtures (this unit) ============================
+# Deterministic terminal/result/reset fixtures for the T2 rules-core terminal extension
+# (NEXT_IMPL_UNIT_PLAN_v0_4 unit 4; ADR-TECH-05 §8 same-tick terminal arbitration + canonical reset;
+# decision #5 life-depletion-same-frame-priority, #11 victory=control completion, #12 defeat=light interruption).
+#   TERMINAL-life-depletion-first     life depletion (segments_lost=3) takes priority over timer completion same-frame.
+#   TERMINAL-victory                  control completion => victory (decision #11).
+#   TERMINAL-defeat-light-interruption life depletion => defeat (decision #12, a result not a punitive screen).
+#   TERMINAL-result-lock              once result_locked, no re-arbitration / no re-emitted terminal event.
+#   TERMINAL-stale-input-rejected     gameplay (contact) input rejected while result locked (result/input lock).
+#   RESET-auto-restart                task=="reset" re-initializes pure state, increments reset_epoch, emits reset_event.
+#   RESET-no-cross-run-loss           after reset a fresh run has no stale life/rearm/snapshot/results (no out-of-run loss).
+# Zero-tolerance exact assertions (O2/B3); no floats/approx. Three life segments = decision #5 product boundary
+# (terminal depletion threshold 3 is the confirmed three-segment life structure, not a promoted rule constant).
+
+# Helper: run one legal contact on a fresh/armed rearm-required victim (contact + separate to re-arm).
+func _terminal_contact_armed(st: Dictionary, sid: int, tick: int, terminal_input: Dictionary = {}) -> Dictionary:
+	var env: Dictionary = {
+		"task": "refresh_fire",
+		"contact_input": [{"id": sid}],
+		"contact_invulnerability_ticks": 30,
+		"contact_damage": 1,
+	}
+	if not terminal_input.is_empty():
+		env["terminal_input"] = terminal_input
+	var res: Dictionary = RULES.step(env, st, tick)
+	return res
+
+
+# TERMINAL-life-depletion-first: when BOTH life depletion (segments_lost=3) and timer completion occur in the SAME
+# tick, life depletion arbitrates to DEFEAT (priority; decision #5 / PRECHARTER-11 / ADR-TECH-05 §8). The victory
+# path (timer_completed) does NOT win because life was depleted in the same frame.
+func test_terminal_life_depletion_first_same_frame() -> void:
+	var st: Dictionary = RULES.empty_state()
+	# Contact 1 -> segments_lost=1 (not terminal).
+	var c1: Dictionary = _terminal_contact_armed(st, 21, 200)
+	assert_int(int(c1["state"]["segments_lost"])).is_equal(1)
+	assert_str(String(c1["state"]["terminal_outcome"])).is_equal("")
+	# Separate -> re-arm.
+	var sep1: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c1["state"], 201)
+	assert_bool(sep1["state"]["contact_rearm"][21]).is_true()
+	# Contact 2 -> segments_lost=2 (not terminal).
+	var c2: Dictionary = _terminal_contact_armed(sep1["state"], 21, 202)
+	assert_int(int(c2["state"]["segments_lost"])).is_equal(2)
+	assert_str(String(c2["state"]["terminal_outcome"])).is_equal("")
+	# Separate -> re-arm.
+	var sep2: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c2["state"], 203)
+	assert_bool(sep2["state"]["contact_rearm"][21]).is_true()
+	# Contact 3 -> segments_lost=3 (life depletion) AND timer_completed=true in the SAME tick -> DEFEAT (life priority).
+	var c3: Dictionary = _terminal_contact_armed(sep2["state"], 21, 204, {"timer_completed": true})
+	assert_int(int(c3["state"]["segments_lost"])).is_equal(3)
+	assert_str(String(c3["state"]["terminal_outcome"])).is_equal("defeat")
+	assert_bool(c3["state"]["result_locked"]).is_true()
+	assert_bool(c3["state"]["reset_pending"]).is_true()
+	# Exactly one terminal_event, outcome defeat.
+	var term_ev := 0
+	for e in c3["events"]:
+		if e["type"] == "terminal_event":
+			term_ev += 1
+			assert_str(String(e["outcome"])).is_equal("defeat")
+	assert_int(term_ev).is_equal(1)
+
+
+# TERMINAL-victory: control completion (timer_completed) with life NOT depleted => victory (decision #11).
+func test_terminal_victory_control_completion() -> void:
+	var st: Dictionary = RULES.empty_state()
+	var res: Dictionary = RULES.step({
+		"task": "refresh_fire",
+		"terminal_input": {"timer_completed": true},
+	}, st, 300)
+	assert_int(int(res["state"]["segments_lost"])).is_equal(0)
+	assert_str(String(res["state"]["terminal_outcome"])).is_equal("victory")
+	assert_bool(res["state"]["result_locked"]).is_true()
+	assert_bool(res["state"]["reset_pending"]).is_true()
+	var got := false
+	for e in res["events"]:
+		if e["type"] == "terminal_event":
+			got = true
+			assert_str(String(e["outcome"])).is_equal("victory")
+	assert_bool(got).is_true()
+
+
+# TERMINAL-defeat-light-interruption: life depletion => defeat, a SHORT result with input locked (not a punitive
+# screen, decision #12). Result holds across subsequent steps (result lock) until reset.
+func test_terminal_defeat_light_interruption() -> void:
+	var st: Dictionary = RULES.empty_state()
+	# Reach segments_lost=2 without terminal, then the 3rd contact depletes life -> defeat.
+	var c1: Dictionary = _terminal_contact_armed(st, 31, 310)
+	var sep1: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c1["state"], 311)
+	var c2: Dictionary = _terminal_contact_armed(sep1["state"], 31, 312)
+	var sep2: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c2["state"], 313)
+	var c3: Dictionary = _terminal_contact_armed(sep2["state"], 31, 314)
+	assert_str(String(c3["state"]["terminal_outcome"])).is_equal("defeat")
+	assert_bool(c3["state"]["result_locked"]).is_true()
+	assert_bool(c3["state"]["reset_pending"]).is_true()
+	# The defeat is a bounded result (input locked), not a punitive state: the rules state carries the clean result
+	# fields and the terminal outcome; the runtime presents it, then the session drives auto-restart.
+	assert_int(int(c3["diagnostics"]["segments_lost"])).is_equal(3)
+	assert_str(String(c3["diagnostics"]["terminal_outcome"])).is_equal("defeat")
+	assert_bool(c3["diagnostics"]["result_locked"]).is_true()
+
+
+# TERMINAL-result-lock: once result_locked, no re-arbitration — a later step (even timer_completed or another
+# depletion) does NOT re-emit a terminal event and does NOT change the outcome.
+func test_terminal_result_lock_no_rearbitration() -> void:
+	var st: Dictionary = RULES.empty_state()
+	# Reach defeat.
+	var c1: Dictionary = _terminal_contact_armed(st, 41, 320)
+	var sep1: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c1["state"], 321)
+	var c2: Dictionary = _terminal_contact_armed(sep1["state"], 41, 322)
+	var sep2: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c2["state"], 323)
+	var c3: Dictionary = _terminal_contact_armed(sep2["state"], 41, 324)
+	assert_str(String(c3["state"]["terminal_outcome"])).is_equal("defeat")
+	assert_bool(c3["state"]["result_locked"]).is_true()
+	# A subsequent step with timer_completed and a depleted life must NOT re-arbitrate or re-emit.
+	var later: Dictionary = RULES.step({
+		"task": "refresh_fire",
+		"contact_input": [{"id": 41}],
+		"terminal_input": {"timer_completed": true},
+	}, c3["state"], 325)
+	assert_str(String(later["state"]["terminal_outcome"])).is_equal("defeat")
+	assert_bool(later["state"]["result_locked"]).is_true()
+	var term_ev := 0
+	for e in later["events"]:
+		if e["type"] == "terminal_event":
+			term_ev += 1
+	assert_int(term_ev).is_equal(0)
+
+
+# TERMINAL-stale-input-rejected: while result_locked, gameplay (contact) input is rejected at the rules seam — no new
+# contact damage, no re-arbitration. The result/input lock holds (ADR-TECH-05 / Systems §4 result/input lock).
+func test_terminal_stale_input_rejected() -> void:
+	var st: Dictionary = RULES.empty_state()
+	# Reach defeat.
+	var c1: Dictionary = _terminal_contact_armed(st, 51, 330)
+	var sep1: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c1["state"], 331)
+	var c2: Dictionary = _terminal_contact_armed(sep1["state"], 51, 332)
+	var sep2: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c2["state"], 333)
+	var c3: Dictionary = _terminal_contact_armed(sep2["state"], 51, 334)
+	assert_str(String(c3["state"]["terminal_outcome"])).is_equal("defeat")
+	assert_bool(c3["state"]["result_locked"]).is_true()
+	# Stale gameplay contact input while result locked -> rejected (no further life deduction, no contact damage event).
+	var stale: Dictionary = RULES.step({
+		"task": "refresh_fire",
+		"contact_input": [{"id": 999}],
+		"contact_invulnerability_ticks": 30,
+		"contact_damage": 1,
+	}, c3["state"], 335)
+	assert_int(int(stale["state"]["segments_lost"])).is_equal(3)
+	assert_str(String(stale["state"]["terminal_outcome"])).is_equal("defeat")
+	var dmg_rejected := 0
+	for e in stale["events"]:
+		if e["type"] == "contact_damage_event":
+			dmg_rejected += 1
+	assert_int(dmg_rejected).is_equal(0)
+
+
+# RESET-auto-restart: task=="reset" re-initializes the rules-owned pure state, increments reset_epoch, emits a
+# reset_event, and clears result/terminal state so a new run is eligible (automatic immediate restart path).
+func test_reset_auto_restart_task() -> void:
+	var st: Dictionary = RULES.empty_state()
+	var c1: Dictionary = _terminal_contact_armed(st, 71, 400)
+	var sep1: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c1["state"], 401)
+	var c2: Dictionary = _terminal_contact_armed(sep1["state"], 71, 402)
+	var sep2: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c2["state"], 403)
+	var c3: Dictionary = _terminal_contact_armed(sep2["state"], 71, 404)
+	assert_str(String(c3["state"]["terminal_outcome"])).is_equal("defeat")
+	# Canonical automatic reset: the session issues task=="reset" after the short result.
+	var reset: Dictionary = RULES.step({"task": "reset"}, c3["state"], 405)
+	assert_int(int(reset["state"]["reset_epoch"])).is_equal(1)   # 0 -> 1
+	assert_int(int(reset["state"]["segments_lost"])).is_equal(0)
+	assert_str(String(reset["state"]["terminal_outcome"])).is_equal("")
+	assert_bool(reset["state"]["result_locked"]).is_false()
+	assert_bool(reset["state"]["reset_pending"]).is_false()
+	assert_array(reset["state"]["target_snapshot_ids"]).is_empty()
+	assert_bool(reset["state"]["contact_rearm"].is_empty()).is_true()
+	# A reset_event was emitted carrying the new reset_epoch.
+	var reset_ev := 0
+	for e in reset["events"]:
+		if e["type"] == "reset_event":
+			reset_ev += 1
+			assert_int(int(e["reset_epoch"])).is_equal(1)
+	assert_int(reset_ev).is_equal(1)
+	assert_int(int(reset["diagnostics"]["reset_epoch"])).is_equal(1)
+
+
+# RESET-no-cross-run-loss: after the canonical reset, a fresh run has NO stale cross-run state — life, re-arm,
+# snapshots, hit/kill results and invalidation are all clean; a new contact in the new run deducts life fresh.
+func test_reset_no_cross_run_loss() -> void:
+	var st: Dictionary = RULES.empty_state()
+	# Reaching a life-depleted (defeat) run.
+	var c1: Dictionary = _terminal_contact_armed(st, 81, 420)
+	var sep1: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c1["state"], 421)
+	var c2: Dictionary = _terminal_contact_armed(sep1["state"], 81, 422)
+	var sep2: Dictionary = RULES.step({"task": "refresh_fire", "contact_input": []}, c2["state"], 423)
+	var c3: Dictionary = _terminal_contact_armed(sep2["state"], 81, 424)
+	assert_int(int(c3["state"]["segments_lost"])).is_equal(3)
+	# Canonical reset clears ALL cross-run state.
+	var reset: Dictionary = RULES.step({"task": "reset"}, c3["state"], 425)
+	assert_bool(reset["state"]["live_candidates"].is_empty()).is_true()
+	assert_bool(reset["state"]["invalidation_log"].is_empty()).is_true()
+	assert_int(int(reset["state"]["segments_lost"])).is_equal(0)
+	assert_bool(reset["state"]["hit_results"].is_empty()).is_true()
+	assert_bool(reset["state"]["kill_outcomes"].is_empty()).is_true()
+	# Fresh run: a new refresh_fire re-feeds a candidate set (no stale snapshot), then a new contact deducts life fresh.
+	var fresh: Dictionary = RULES.step({
+		"task": "refresh_fire",
+		"live_candidates": [{"stable_id": 91, "k1_bucket": 0, "k2_bucket": 0, "alive": true, "hp": 1}],
+		"contact_input": [{"id": 91}],
+		"contact_invulnerability_ticks": 30,
+		"contact_damage": 1,
+	}, reset["state"], 426)
+	# Life starts at 0 in the new run (no carried loss); first fresh contact deducts 1.
+	assert_int(int(fresh["state"]["segments_lost"])).is_equal(1)
+	assert_str(String(fresh["state"]["terminal_outcome"])).is_equal("")
+	assert_bool(fresh["state"]["result_locked"]).is_false()
+	assert_array(fresh["state"]["target_snapshot_ids"]).is_equal([91])
+	# Exactly one fresh contact damage event in the new run (no phantom / no cross-run repeat).
+	var dmg := 0
+	for e in fresh["events"]:
+		if e["type"] == "contact_damage_event":
+			dmg += 1
+	assert_int(dmg).is_equal(1)
+
+
+# Additive compatibility: terminal/reset are opt-in — fixtures/steps without terminal_input and without task=="reset"
+# do NOT set terminal state, and a victory/defeat outcome is only produced when triggered (existing semantics intact).
+func test_terminal_absent_preserves_existing_semantics() -> void:
+	var st: Dictionary = RULES.empty_state()
+	var res: Dictionary = RULES.step({
+		"task": "refresh_fire",
+		"live_candidates": [{"stable_id": 3, "k1_bucket": 1, "k2_bucket": 1, "alive": true, "hp": 1}],
+		"contact_input": [{"id": 3}],
+		"contact_invulnerability_ticks": 30,
+		"contact_damage": 1,
+	}, st, 500)
+	# No terminal_input, no depletion (segments_lost=1) -> no terminal outcome, no result lock.
+	assert_int(int(res["state"]["segments_lost"])).is_equal(1)
+	assert_str(String(res["state"]["terminal_outcome"])).is_equal("")
+	assert_bool(res["state"]["result_locked"]).is_false()
+	assert_int(int(res["state"]["reset_epoch"])).is_equal(0)
+	var has_terminal := false
+	for e in res["events"]:
+		if e["type"] == "terminal_event" or e["type"] == "reset_event":
+			has_terminal = true
+	assert_bool(has_terminal).is_false()

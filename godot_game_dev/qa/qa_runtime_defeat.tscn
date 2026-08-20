@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://c05y5m17su1ta"]
+
+[ext_resource type="Script" uid="uid://bxcwgoxp8v5p7" path="res://qa/qa_runtime_seam.gd" id="1_p4f8u"]
+
+[node name="qa_runtime_defeat" type="Node2D" unique_id=950207630]
+script = ExtResource("1_p4f8u")
+scenario = "defeat"

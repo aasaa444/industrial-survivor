@@ -41,14 +41,43 @@
 #                      persistent overlap cannot repeat damage (CONTACT-overlap). Separation also ENDS the brief
 #                      invulnerability window, so a future new contact after re-arm is legal (CONTACT-separate-rearm /
 #                      C2 points: "分离后无敌结束、未来新接触可再触发"); removal during protection cleans state (CONTACT-removal).
-#   life deduction semantics: contact damage deducts `segments_lost` (0..3 per the three life segments); defeat/terminal
-#   arbitration is deferred (not this unit) — segments_lost is capped at 3 and no defeat/reset is triggered here.
+#   life deduction semantics: contact damage deducts `segments_lost` (0..3 per the three life segments); terminal/defeat
+#   arbitration is THIS unit (see below) — segments_lost reaching 3 (life depletion) arbitrates to DEFEAT.
 #   All contact numbers (invulnerability ticks, damage per contact) are ENVELOPE PARAMETERS with candidate defaults,
 #   never promoted rule constants (promotion_authority=User; NUMBERS NOT FROZEN).
+#
+# T2 terminal extension (this unit, rules-core terminal pure logic; NEXT_IMPL_UNIT_PLAN_v0_4 unit 4):
+#   The rules core receives the terminal domain input through the envelope (`terminal_input = {timer_completed: bool}`,
+#   session/adapter domain input for the 8-minute completion), and observes life depletion through its OWN `segments_lost`
+#   (rules-owned). It performs SAME-FRAME TERMINAL ARBITRATION in the canonical order (ADR-TECH-05 §8 / Systems §4
+#   steps 4-6): evaluate legal events -> arbitrate terminal outcome -> enter result/input lock -> emit short clear result
+#   -> run one canonical automatic reset.
+#   - Life depletion (segments_lost >= 3) takes priority over eight-minute completion (timer_completed) when both occur
+#     in the same tick (decision #5 / PRECHARTER-11 / ADR-TECH-05).
+#   - Victory = control completion (timer_completed with life NOT depleted) (decision #11).
+#   - Defeat  = life depletion result, a light interruption (decision #12), NOT punitive.
+#   - Result/input lock: once `result_locked`, no further arbitration re-fires and gameplay-relevant inputs are rejected
+#     (TERMINAL-result-lock / TERMINAL-stale-input-rejected).
+#   - Auto reset semantics are DETERMINISTIC pure re-initialization: a `task=="reset"` step re-initializes the
+#     rules-owned pure state (candidates/life/hp/tick/ID) with NO cross-run dirty state, increments `reset_epoch`, and
+#     emits a `reset_event`. Session-level RNG/run-id reset remains session-owned (ADR-TECH-01/05; session.reset()).
+#   All terminal values (life depletion threshold 3, victory/defeat outcome enum) are either product-boundary constants
+#   (three life segments / life-depletion victory priority — user_confirmed decision #5) or envelope-candidate
+#   parameters (result duration at runtime is NOT here; it is adapter/runtime candidate). No number is frozen as a rule
+#   constant beyond the confirmed three-life-segment product boundary.
+#
+# B2 upgrade extension (this unit, rules-core upgrade pure logic; M1 B2):
+#   The rules core receives the upgrade domain input through the envelope (`task=="upgrade_select"` +
+#   `selected_card_id`). It applies the upgrade effects based on the current `b2_phase`:
+#   - "pierce" phase: sets `attack_max_targets` to 3 (penetration: hit up to 3 targets per shot).
+#   - "fan" phase: sets `attack_fan_arcs` to 3 (fan: three independent attack arcs).
+#   The `attack_max_targets` field also caps the resolve loop: at most N targets are hit per shot (default 1;
+#   envelope override `attack_max_targets` can override for backward-compatible test fixtures).
+#   All upgrade effects are deterministic, pure, and engine-free; the rules core never owns card presentation.
 class_name DshRulesCore
 extends RefCounted
 
-const CONFIG_VERSION: String = "rules-core-v3"
+const CONFIG_VERSION: String = "rules-core-v4"
 
 # A fresh, empty rules state. `live_candidates` is the current live observation set (adapter-normalized);
 # the core never mutates it in place and always derives ordered_ids from an immutable copy.
@@ -67,9 +96,20 @@ static func empty_state() -> Dictionary:
 		"kill_outcomes": {},          # {id: true} for targets that died in this shot (hp <= 0)
 		"next_eligible_fire_tick": 0,
 		# --- C2 contact state (rules-core owned; no engine entities) ---
-		"segments_lost": 0,                     # life segments lost (0..3); defeat arbitration deferred (not this unit)
+		"segments_lost": 0,                     # life segments lost (0..3); 3 = life depletion -> terminal defeat (this unit)
 		"contact_invulnerable_until_tick": -1,  # global brief invulnerability window end (tick); -1 = not invulnerable
 		"contact_rearm": {},                    # {victim_id: bool} - false = rearm required (needs separation); absent = armed
+		# --- T2 terminal state (rules-core owned; no engine entities) ---
+		"terminal_outcome": "",                # "" (running) | "victory" | "defeat"  (decision #11 victory=control completion / #12 defeat=light interruption)
+		"result_locked": false,                # result/input lock: once true, no re-arbitration, gameplay input rejected
+		"reset_pending": false,                # true when a canonical reset is due (session drives task=="reset" after the short result)
+		"reset_epoch": 0,                      # deterministic pure reset counter; increments on each rules task=="reset"
+		# --- B2 upgrade state (rules-core owned; no engine entities) ---
+		"b2_phase": "pre",                     # "pre" | "pierce" | "fan" — current B2 upgrade phase
+		"upgrade_pending": false,              # true when an upgrade window is active (combat paused)
+		"upgrade_cards": [],                   # [{id, keyword, label, effect_desc}] — cards offered this window
+		"attack_max_targets": 1,               # how many targets the attack hits per shot (1 base; pierce=3)
+		"attack_fan_arcs": 1,                  # number of attack arcs (1 base; fan=3: left/center/right)
 	}
 
 # --- Pure quantization helper -------------------------------------------------
@@ -183,7 +223,13 @@ static func _kill_decision_trace(state: Dictionary, killed: Dictionary, tick: in
 #       recommended default: single contact damage + invulnerability swallowing; Nx stacking is an explicit unresolved
 #       boundary reported by the CONTACT-simultaneous fixture, not implemented here).
 # All values (invulnerability ticks, damage per contact) are envelope parameters with candidate defaults.
+# NOTE (terminal): once `result_locked`, gameplay-relevant input (contact) is rejected at the rules seam — the
+# `_apply_terminal` guard prevents re-arbitration, and here we additionally skip NEW contact damage so a terminal
+# result lock holds (TERMINAL-stale-input-rejected).
 static func _apply_contact(state: Dictionary, envelope: Dictionary, events: Array, tick: int, diagnostics: Dictionary) -> void:
+	# Result/input lock: a terminal result is active -> reject new gameplay contact input (no re-damage).
+	if bool(state.get("result_locked", false)):
+		return
 	var contact_input: Array = envelope.get("contact_input", [])
 	var invuln_ticks: int = int(envelope.get("contact_invulnerability_ticks", 30))
 	if invuln_ticks < 0:
@@ -225,7 +271,7 @@ static func _apply_contact(state: Dictionary, envelope: Dictionary, events: Arra
 		# Legal contact: exactly one damage event; the whole overlapping set merges into it.
 		var segments_lost: int = int(state.get("segments_lost", 0)) + damage
 		if segments_lost > 3:
-			segments_lost = 3    # three life segments; defeat/terminal arbitration deferred (not this unit)
+			segments_lost = 3    # three life segments (decision #5); 3 = life depletion -> terminal defeat (this unit)
 		state["segments_lost"] = segments_lost
 		state["contact_invulnerable_until_tick"] = tick + invuln_ticks
 		for mid in in_contact.keys():
@@ -240,10 +286,80 @@ static func _apply_contact(state: Dictionary, envelope: Dictionary, events: Arra
 		break
 
 
+# --- T2 pure terminal arbitration (engine-free, deterministic, zero RNG) --------
+# Evaluates the terminal outcome AFTER this step's legal events (contact/resolve), in the canonical order
+# (ADR-TECH-05 §8 / Systems §4 steps 4-6): evaluate legal events -> arbitrate terminal outcome -> enter result/input
+# lock -> emit short clear result -> run one canonical automatic reset (task=="reset").
+#   - Life depletion (segments_lost >= 3) takes priority over eight-minute completion (envelope terminal_input.timer_completed)
+#     when both occur in the same tick (decision #5 / PRECHARTER-11).
+#   - Victory = timer completion with life NOT depleted (decision #11). Defeat = life depletion (decision #12, light interruption).
+#   - Result/input lock: once set, no re-arbitration (TERMINAL-result-lock); gameplay input rejected (TERMINAL-stale-input-rejected).
+#   - The canonical automatic reset is a separate `task=="reset"` step (reset_pending set here; the session drives the
+#     short-result cadence then issues the reset). Do NOT auto-reinitialize in the same tick — the short clear result
+#     must be observable/input-locked first (ADR-TECH-05: emit short clear result -> then reset).
+static func _apply_terminal(state: Dictionary, envelope: Dictionary, events: Array, tick: int) -> void:
+	# Result/input already locked -> no re-arbitration (result lock holds across subsequent steps until reset).
+	if bool(state.get("result_locked", false)) or String(state.get("terminal_outcome", "")) != "":
+		return
+	var life_depleted: bool = int(state.get("segments_lost", 0)) >= 3
+	var timer_completed: bool = bool(envelope.get("terminal_input", {}).get("timer_completed", false))
+	var outcome: String = ""
+	if life_depleted:
+		# Life depletion takes priority over eight-minute completion in the same tick (decision #5 / PRECHARTER-11).
+		outcome = "defeat"
+	elif timer_completed:
+		# Control completion (victory) only when life is NOT depleted (decision #11).
+		outcome = "victory"
+	if outcome != "":
+		state["terminal_outcome"] = outcome
+		state["result_locked"] = true
+		state["reset_pending"] = true
+		events.append({"type": "terminal_event", "outcome": outcome, "tick": tick})
+
+
+# --- T2 pure canonical reset (engine-free, deterministic) ----------------------
+# The canonical automatic reset transaction at the RULES seam: re-initializes the rules-owned pure state with NO
+# cross-run dirty state — candidates, life, hp, tick-relevant contact/re-arm, snapshots, results and invalidation are
+# all rebuilt fresh. Increments `reset_epoch` (deterministic) and emits a `reset_event`. RNG/run-id reset is NOT here:
+# it belongs to the session (session.reset(), ADR-TECH-01/05). After reset the engine re-fed a fresh candidate set on
+# the next refresh_fire.
+static func _apply_reset(state: Dictionary, events: Array, tick: int) -> void:
+	state["segments_lost"] = 0
+	state["contact_invulnerable_until_tick"] = -1
+	state["contact_rearm"] = {}
+	state["live_candidates"] = []
+	state["ordered_ids"] = []
+	state["target_snapshot_ids"] = []
+	state["no_target_branch"] = false
+	state["refresh_tick"] = -1
+	state["lock_tick"] = -1
+	state["invalidation_log"] = []
+	state["hit_results"] = {}
+	state["resolution_outcomes"] = {}
+	state["kill_outcomes"] = {}
+	state["next_eligible_fire_tick"] = 0
+	state["terminal_outcome"] = ""
+	state["result_locked"] = false
+	state["reset_pending"] = false
+	state["reset_epoch"] = int(state.get("reset_epoch", 0)) + 1
+	# B2: reset upgrade fields to pre-upgrade state.
+	state["b2_phase"] = "pre"
+	state["upgrade_pending"] = false
+	state["upgrade_cards"] = []
+	state["attack_max_targets"] = 1
+	state["attack_fan_arcs"] = 1
+	events.append({
+		"type": "reset_event",
+		"reset_epoch": int(state["reset_epoch"]),
+		"tick": tick,
+		"config_version": CONFIG_VERSION,
+	})
+
+
 # --- Headless seam: step(domain_input_envelope, prior_state, tick) ---------------
 # Returns {state, events, diagnostics}. `prior_state` is never mutated (clone-on-write).
 # Envelope: {
-#   "task": "refresh_fire" | "resolve",
+#   "task": "refresh_fire" | "resolve" | "reset" | "none",
 #   "live_candidates": [candidate records] (adapter-normalized observations for refresh; optional `hp` per candidate,
 #                       defaults to 1 so existing TARGET-* fixtures remain valid without an explicit hp field),
 #   "removed_ids": [id, ...] (explicit domain events drained at this step's drain point),
@@ -252,6 +368,11 @@ static func _apply_contact(state: Dictionary, envelope: Dictionary, events: Arra
 #   "contact_input": [{id}, ...] (C2: adapter contact observations of currently eligible overlapping victims),
 #   "contact_invulnerability_ticks": int (C2 candidate default 30; envelope parameter, NOT frozen),
 #   "contact_damage": int (C2 candidate default 1; envelope parameter, NOT frozen),
+#   "terminal_input": {timer_completed: bool} (T2: session domain input for the 8-minute completion; life depletion is
+#                       observed through the rules-owned segments_lost, not passed in),
+#   "attack_max_targets": int (B2: envelope override for the max targets per shot; falls back to state.attack_max_targets;
+#                              default 1 from state; used for backward-compatible test fixtures),
+#   "selected_card_id": int (B2: the id of the card selected during an upgrade window; used with task=="upgrade_select"),
 # }
 static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Dictionary:
 	var state: Dictionary = _clone_input(prior_state)
@@ -271,7 +392,56 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 		"contact_damaged": [],
 		"contact_rearmed": [],
 		"segments_lost": 0,
+		# --- T2 terminal diagnostics (additive, read-only exports) ---
+		"terminal_outcome": "",
+		"result_locked": false,
+		"reset_pending": false,
+		"reset_epoch": int(state.get("reset_epoch", 0)),
 	}
+
+	var task: String = envelope.get("task", "none")
+
+	# --- Canonical reset task: re-initialize the rules-owned pure state (RESET-* fixtures). ---
+	if task == "reset":
+		diagnostics["steps"].append("reset")
+		_apply_reset(state, events, tick)
+		state["config_version"] = CONFIG_VERSION
+		diagnostics["terminal_outcome"] = String(state.get("terminal_outcome", ""))
+		diagnostics["result_locked"] = bool(state.get("result_locked", false))
+		diagnostics["reset_pending"] = bool(state.get("reset_pending", false))
+		diagnostics["reset_epoch"] = int(state.get("reset_epoch", 0))
+		diagnostics["segments_lost"] = int(state.get("segments_lost", 0))
+		return {"state": state, "events": events, "diagnostics": diagnostics}
+
+	# --- B2 upgrade_select task: receive selected card, apply upgrade effects, clear upgrade_pending. ---
+	if task == "upgrade_select":
+		diagnostics["steps"].append("upgrade_select")
+		var selected_card_id: int = int(envelope.get("selected_card_id", -1))
+		var phase: String = String(envelope.get("b2_phase", state.get("b2_phase", "pre")))
+		# Apply upgrade effects based on phase and selected card.
+		if phase == "pierce":
+			state["attack_max_targets"] = 3
+			state["b2_phase"] = "pierce"
+		elif phase == "fan":
+			state["attack_fan_arcs"] = 3
+			state["b2_phase"] = "fan"
+		state["upgrade_pending"] = false
+		state["upgrade_cards"] = []
+		events.append({
+			"type": "upgrade_event",
+			"phase": phase,
+			"selected_card_id": selected_card_id,
+			"tick": tick,
+			"attack_max_targets": int(state.get("attack_max_targets", 1)),
+			"attack_fan_arcs": int(state.get("attack_fan_arcs", 1)),
+		})
+		state["config_version"] = CONFIG_VERSION
+		diagnostics["segments_lost"] = int(state.get("segments_lost", 0))
+		diagnostics["terminal_outcome"] = String(state.get("terminal_outcome", ""))
+		diagnostics["result_locked"] = bool(state.get("result_locked", false))
+		diagnostics["reset_pending"] = bool(state.get("reset_pending", false))
+		diagnostics["reset_epoch"] = int(state.get("reset_epoch", 0))
+		return {"state": state, "events": events, "diagnostics": diagnostics}
 
 	# [a] Named drain point: drain invalidation/removal domain events at the start of this step's resolution boundary.
 	for rid in envelope.get("removed_ids", []):
@@ -283,13 +453,13 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 		# contact with a fresh/removed id re-arms normally (state cleanup, future re-arm behavior).
 		state["contact_rearm"].erase(int(r))
 
-	var task: String = envelope.get("task", "none")
 	var attack_damage: int = int(envelope.get("attack_damage", 1))
 	if attack_damage < 1:
 		attack_damage = 1
 
 	# C2 contact evaluation runs when the adapter supplies contact observations (independent of the attack task;
-	# fixtures that do not pass contact_input are untouched - additive).
+	# fixtures that do not pass contact_input are untouched - additive). When result_locked, new contact damage is
+	# rejected at the rules seam (TERMINAL-stale-input-rejected).
 	if envelope.has("contact_input"):
 		_apply_contact(state, envelope, events, tick, diagnostics)
 
@@ -327,41 +497,49 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 	elif task == "resolve":
 		# [f][g] Resolution reads ONLY the locked snapshot (no live re-query). Invalidated snapshot IDs produce no hit
 		# (no fabricated hit). The immutable snapshot ID set is never changed by resolution.
+		# B2: attack_max_targets caps the number of targets hit per shot (envelope override > state; default 1).
 		diagnostics["steps"].append("resolve")
+		var attack_max_targets: int = int(envelope.get("attack_max_targets", int(state.get("attack_max_targets", 1))))
+		if attack_max_targets < 1:
+			attack_max_targets = 1
 		var invalid: Dictionary = {}
 		for inv in state.get("invalidation_log", []):
 			invalid[int(inv["id"])] = true
 		var hit_map: Dictionary = {}
 		var outcomes: Dictionary = {}
 		var killed: Dictionary = {}
+		var hit_count: int = 0
 		for sid_raw in state.get("target_snapshot_ids", []):
 			var sid: int = int(sid_raw)
 			if invalid.has(sid):
 				outcomes[sid] = "no-hit-invalid"
 				events.append({"type": "resolution_outcome", "id": sid, "outcome": "no-hit-invalid", "tick": tick})
-			else:
-				outcomes[sid] = "hit"
-				hit_map[sid] = true
-				events.append({"type": "resolution_outcome", "id": sid, "outcome": "hit", "tick": tick})
-				# [kill path] Apply single-hit damage to the live candidate, record death when hp <= 0.
-				var cand: Dictionary = _find_candidate(state["live_candidates"], sid)
-				if not cand.is_empty():
-					var hp: int = int(cand.get("hp", 1))
-					hp = hp - attack_damage
-					cand["hp"] = hp
-					if hp <= 0:
-						# Deterministic death: flip `alive`, emit a kill_event, remember the kill outcome.
-						# ordered_candidates excludes alive==false -> the next refresh naturally drops this target
-						# (clean-shrink signal, consistent with the invalidation drain semantics (ii)).
-						cand["alive"] = false
-						cand["dead"] = true
-						killed[sid] = true
-						events.append({
-							"type": "kill_event",
-							"id": sid,
-							"tick": tick,
-							"hp_left": 0,
-						})
+				continue   # invalid targets do not consume a hit slot
+			if hit_count >= attack_max_targets:
+				break
+			outcomes[sid] = "hit"
+			hit_map[sid] = true
+			hit_count += 1
+			events.append({"type": "resolution_outcome", "id": sid, "outcome": "hit", "tick": tick})
+			# [kill path] Apply single-hit damage to the live candidate, record death when hp <= 0.
+			var cand: Dictionary = _find_candidate(state["live_candidates"], sid)
+			if not cand.is_empty():
+				var hp: int = int(cand.get("hp", 1))
+				hp = hp - attack_damage
+				cand["hp"] = hp
+				if hp <= 0:
+					# Deterministic death: flip `alive`, emit a kill_event, remember the kill outcome.
+					# ordered_candidates excludes alive==false -> the next refresh naturally drops this target
+					# (clean-shrink signal, consistent with the invalidation drain semantics (ii)).
+					cand["alive"] = false
+					cand["dead"] = true
+					killed[sid] = true
+					events.append({
+						"type": "kill_event",
+						"id": sid,
+						"tick": tick,
+						"hp_left": 0,
+					})
 		state["hit_results"] = hit_map
 		state["resolution_outcomes"] = outcomes
 		state["kill_outcomes"] = killed.duplicate(true)
@@ -376,7 +554,16 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 			diagnostics["kill_decision_trace"] = _kill_decision_trace(state, killed, tick)
 			diagnostics["live_reduction_count"] = killed.size()
 
+	# [terminal] Same-frame terminal arbitration AFTER this step's legal events. Life depletion takes priority over
+	# eight-minute completion in the same tick (decision #5 / PRECHARTER-11 / ADR-TECH-05 §8). Result/input lock is
+	# entered here; the canonical reset is a later `task=="reset"` step driven by the session after the short result.
+	_apply_terminal(state, envelope, events, tick)
+
 	# [h] Return a fresh (new_state, events, diagnostics); prior_state untouched.
 	state["config_version"] = CONFIG_VERSION
 	diagnostics["segments_lost"] = int(state.get("segments_lost", 0))
+	diagnostics["terminal_outcome"] = String(state.get("terminal_outcome", ""))
+	diagnostics["result_locked"] = bool(state.get("result_locked", false))
+	diagnostics["reset_pending"] = bool(state.get("reset_pending", false))
+	diagnostics["reset_epoch"] = int(state.get("reset_epoch", 0))
 	return {"state": state, "events": events, "diagnostics": diagnostics}

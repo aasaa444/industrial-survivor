@@ -1,0 +1,5 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[SELF-TEST] restricted deterministic regression (scripted zero-move + scripted fire; NOT player-playable input evidence)
+[TIMING][GRACE] tick=1 remaining=0.855s; presentation-only
+[READ-MODEL] attack: idle | kill: none | feedback: - (quiet) |  | contact: none

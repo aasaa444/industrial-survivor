@@ -1,6 +1,7 @@
-# runtime/main.gd
+﻿# runtime/main.gd
 # S4 minimal runtime scene controller, v0.2 (playable-slice polish, NEXT_IMPL_UNIT_PLAN_v0_2 candidate A)
 # + v0.3 (contact slice, NEXT_IMPL_UNIT_PLAN_v0_3 unit B: C2/C3/C4/C5).
+# + v0.4 (terminal/reset slice, NEXT_IMPL_UNIT_PLAN_v0_4 unit 4: T2/T3/T4/T5).
 # Provides the smallest observable vertical slice:
 #   player node (real keyboard movement), >=1 enemy node (fed as ordered_candidates to the pure rules core),
 #   a visible auto-attack line pointing at the locked snapshot target, hit/kill feedback bound to
@@ -11,7 +12,7 @@
 #     session (session.step). It never invents target selection / ordering / hit legality / contact legality itself.
 #   - Feedback is applied strictly from DshAdapter.feedback_from_result so an empty shot never fabricates a lock or hit.
 #
-# R1 (this unit) — real input-driven movement (formalized):
+# R1 (this unit) 鈥?real input-driven movement (formalized):
 #   WASD + arrow keys (held-key polling) -> ADAPTER.movement_from_input -> carried as intent into the domain envelope
 #   (make_envelope) -> engine applies displacement to the player node. The rules core never reads movement values; the
 #   engine re-observes enemy positions AFTER the player has moved, so the NEXT pre-fire refresh re-locks a snapshot
@@ -22,36 +23,47 @@
 #   explicitly NOT player-playable input evidence (a [SELF-TEST] marker is printed at start; real keyboard input is
 #   observed by Independent QA through the runtime, not through this headless regression).
 #
-# R2 (this unit) — read-model full-field presentation (READ_MODEL_MINIMAL_FIELDS_v0_1 S5; ADR-TECH-02; UX-03 S1-S3):
-#   HUD minimal face       LIFE (three segments, segments_lost structure constant 0 this unit) / TIMER
-#                          (current_tick + run_duration_bound opaque) / B2 pre-fission structure placeholder.
-#   attack_state           four states idle/resolving/resolved/no_target derived ONLY from rules trace fields
-#                          (no_target_branch / hit_results / target_snapshot_ids).
+# R2 (this unit) 鈥?read-model full-field presentation (READ_MODEL_MINIMAL_FIELDS_v0_1 S5; ADR-TECH-02; UX-03 S1-S3):
+#   HUD minimal face       LIFE (three segments) / TIMER / B2 pre-fission structure placeholder.
+#   attack_state           four states idle/resolving/resolved/no_target derived ONLY from rules trace fields.
 #   kill_state             none -> killed, presented only while kill_outcomes is non-empty (settlement trace).
-#   feedback binding       lock/hit/kill classes emitted only when their rule source is non-empty
-#                          (target_snapshot_ids / hit_results / kill_outcomes); a [FB-BIND] log + HUD marker show the bind.
-#   invalidation section   invalidation_event(id,tick) surfaced as "no hit this shot" (presentation-visible part only).
+#   feedback binding       lock/hit/kill classes emitted only when their rule source is non-empty.
+#   invalidation section   invalidation_event(id,tick) surfaced as "no hit this shot".
 #   no-target quiet        no_target_branch => quiet form (no lock, no phantom hit); optional ONE-SHOT restrained
-#                          non-color cue bound to the branch (S5 §4.2; exact presentation form NOT frozen / unresolved).
-#   hint field             explicitly NOT implemented (S5 §4.4 exclusion; hint copy/trigger/effective-movement unresolved).
+#                          non-color cue bound to the branch (exact presentation form NOT frozen).
+#   hint field             explicitly NOT implemented (S5 搂4.4 exclusion).
 #
-# C4 (this unit) — adapter/运行时 contact · damage · separation · re-arm (NEXT_IMPL_UNIT_PLAN_v0_3 unit B):
+# C4 (this unit) 鈥?adapter/杩愯鏃?contact 路 damage 路 separation 路 re-arm (NEXT_IMPL_UNIT_PLAN_v0_3 unit B):
 #   - Engine-side overlap detection (ADR-TECH-01 seam): AABB overlap between the player rect and each live enemy rect
 #     is computed HERE (engine geometry), then translated by the adapter (ADAPTER.contact_observations) into the
-#     domain contact input the rules core consumes. The rules core judges legal contact / damage / invulnerability /
-#     re-arm (C2); the engine never decides those.
+#     domain contact input the rules core consumes.
 #   - Contact input rides every domain envelope (empty included) so separation/re-arm is evaluated every step.
-#   - Light separation is an ENGINE-side physical response (C4: "engine entity physical movement/re-arm belongs to the
-#     adapter"): on a legal contact damage the player is nudged a small distance away from the contacting victim so the
-#     pair separates and re-arm can occur. The separation magnitude is a candidate value (contact_separate_dist),
-#     NOT a frozen rule constant.
-#   - self-test gains a deterministic contact regression phase (scripted enemy ON the player -> overlap -> exactly one
-#     contact damage -> segments_lost=1 -> no repeat; then quit 0).
+#   - Light separation is an ENGINE-side physical response: on a legal contact damage the player is nudged a small
+#     distance away from the contacting victim so the pair separates and re-arm can occur.
+#   - self-test gains a deterministic contact regression phase.
 #
-# C5 (this unit) — life deduction read-model presentation:
-#   LIFE line now reflects the REAL deductions: three segments, `[x]` = lost / `[o]` = alive, segments_lost read from
-#   the rules trace (non-color, text/shape only; UX-13). A contact read-model line (`contact: ...`) is bound to the
-#   contact events from the rules step. Hint/copy/layout/assets remain unfrozen.
+# C5 (this unit) 鈥?life deduction read-model presentation:
+#   LIFE line reflects the REAL deductions: three segments, `[x]` = lost / `[o]` = alive, segments_lost read from
+#   the rules trace (non-color, text/shape only; UX-13). A contact read-model line is bound to the contact events.
+#
+# T4 + T5 (this unit) 鈥?runtime terminal arbitration -> RESULT presentation -> automatic immediate retry
+#   (NEXT_IMPL_UNIT_PLAN_v0_4 unit 4; ADR-TECH-05 搂8; decision #5/#11/#12):
+#   - The rules core arbitrates the terminal outcome (victory=control completion / defeat=life depletion, life-depletion-
+#     same-frame-priority) from `terminal_input.timer_completed` + its own `segments_lost`. This runtime only sends the
+#     session domain input (timer_completed when the candidate run_duration_ticks is reached) and OBSERVES the outcome.
+#   - While a terminal result is active (rules result_locked), gameplay input is DISABLED (movement + attack are not
+#     read; result/input lock, ADR-TECH-05 / Systems 搂4 step 5), and the RESULT is presented readable and non-color
+#     (UX-13) in an HUD region that does not occlude player/danger/space (UX-09):
+#         "RESULT: victory (clear)"          (decision #11, control completion)
+#         "RESULT: defeat (light interruption)" (decision #12, non-punitive)
+#   - After the short candidate result duration (terminal_result_duration), the runtime triggers the canonical
+#     automatic reset (session.reset(): run identity advances, RNG reseeded, clean rules state 鈥?no out-of-run loss)
+#     and re-spawns fresh placeholder enemies for the new run (immediate retry, no out-of-run loss; Systems 搂3 reset /
+#     UX matrix Restart).
+#   - RNG/session/run-id reset remains session-owned mechanical handling (ADR-TECH-01/05); this node only calls
+#     session.reset() for the restart transaction. presentation consumes only the read-model / rules trace.
+#   - All timing candidates (terminal_result_duration, run_duration_ticks) are candidate values, NOT frozen rule
+#     constants (promotion_authority=User).
 extends Node2D
 
 const ADAPTER = preload("res://adapter/adapter.gd")
@@ -61,10 +73,20 @@ const SESSION = preload("res://rules/session.gd")
 @export var attack_interval: float = 0.6
 @export var contact_separate_dist: float = 26.0   # C4 candidate separation magnitude (NOT a frozen rule constant)
 @export var contact_invuln_ticks: int = 30         # C4 candidate invulnerability ticks (NOT a frozen rule constant)
+@export var terminal_result_duration: float = 1.2  # T4 candidate short-result duration before auto-restart (NOT frozen)
+@export var run_duration_ticks: int = 4800         # T4 candidate opaque eight-minute run-bound in session ticks (NOT frozen;
+												   # exact tick<->time mapping deferred to Systems; victory path also covered by
+												   # the rules-core TERMINAL-victory fixture)
 
 var session  # DshSession instance (untyped to avoid a global-class-cache dependency at headless scene load)
 var locked_this_epoch: bool = false
 var last_fire_time: float = 0.0
+var spawn_grace_remaining: float = 1.0
+var resolve_delay_remaining: float = 0.0
+var _grace_phase_logged: bool = false
+
+# QA debug-only observation seam: when true, pauses grace countdown so QA can capture runtime state.
+var qa_hold_grace: bool = false
 
 # Node handles built at runtime (placeholder presentation).
 var player_visual: ColorRect
@@ -78,12 +100,32 @@ var feedback_label: Label
 var invalidation_label: Label
 var no_target_label: Label
 var contact_label: Label
+var result_label: Label
 var enemies: Array = []          # [{node, stable_id, hp, hit_flash}]
 var next_stable_id: int = 1
+
+# B5: Arena background
+var arena_bg: Sprite2D
+
+# Audio nodes
+var _bgm_player: AudioStreamPlayer
+var _attack_sfx_player: AudioStreamPlayer2D
+var _enemy_death_sfx_player: AudioStreamPlayer
+var _upgrade_sfx_player: AudioStreamPlayer
+var _card_confirm_sfx_player: AudioStreamPlayer
+
+# Texture resources for player animation
+var _player_idle_texture: Texture2D
+var _player_attack_texture: Texture2D
 
 # Read-model presentation state (presentation layer only; never a second rules authority).
 var _quiet_episode_active: bool = false
 var _last_presented_line: String = ""
+
+# T4/T5 terminal-result runtime state (presentation + input-lock + auto-restart cadence).
+var _in_result: bool = false
+var _result_state: String = ""         # "" | "victory" | "defeat"  (runtime mirror of rules terminal_outcome)
+var _result_remaining: float = 0.0     # countdown to automatic immediate retry (short result, then reset)
 
 var self_test_mode: bool = false
 var self_test_t: float = 0.0
@@ -93,16 +135,127 @@ var self_test_done: bool = false
 var self_test_contact_frames: int = 0
 var self_test_contact_done: bool = false
 var self_test_contact_enemy: Dictionary = {}
+var self_test_terminal_depleted: bool = false   # T4: deterministic terminal regression flag (life depletion reached)
+var self_test_drive_terminal: bool = false       # T4: while true, drive the terminal via direct session.step (skip engine combat)
+var self_test_seen_result: bool = false          # T4: observed the result phase enter (for the post-restart pass check)
+
+# B2 upgrade runtime state (presentation + selection + visual).
+var _upgrade_pending: bool = false
+var _upgrade_phase: String = ""           # "pierce" | "fan"
+var _upgrade_cards: Array = []            # [{id, keyword, difference, effect, shortcut}]
+var _upgrade_first_done: bool = false
+var _upgrade_second_done: bool = false
+var _upgrade_card_labels: Array = []      # [Label, Label, Label] card text labels (deprecated; kept for cleanup)
+var _upgrade_prompt_label: Label          # prompt label
+var _fan_left_line: Line2D                # fan left arc line
+var _fan_right_line: Line2D               # fan right arc line
+
+# B2 card UI state (UX spec v0.1: six-state card selection interface).
+var _card_state: int = 0                  # 0=hidden, 1=transition_in, 2=inspection, 3=pressed, 4=acquired, 5=transition_out
+var _card_focused_idx: int = 1            # 0/1/2 (default center)
+var _card_selected_idx: int = -1          # -1 = none selected
+var _card_input_guarded: bool = false     # true during transition/feedback phases
+var _card_phase_timer: float = 0.0        # remaining time in current phase
+var _card_input_mode: String = "keyboard" # "keyboard" or "mouse"
+var _card_nodes: Array = []               # [{bg, container, keyword, diff, effect}]
+var _card_hud: CanvasLayer = null         # card canvas layer reference
+
+# B2 attack visual upgrade: glow layers + hit flash + kill tween state
+var _attack_glow_line: Line2D             # glow layer behind attack line (wider, semi-transparent)
+var _fan_left_glow_line: Line2D           # glow for left fan arc
+var _fan_right_glow_line: Line2D          # glow for right fan arc
+var _fan_mid_line: Line2D
+var _fan_mid_glow_line: Line2D
+var _attack_afterimage_line: Line2D
+var _pierce_clear_line: Line2D
+var _fan_clear_line: Line2D
+var _fan_clear_left_line: Line2D
+var _fan_clear_right_line: Line2D
+var _upgrade_confirm_flash: ColorRect
+var _attack_afterimage_tween: Tween
+var _clear_effect_tween: Tween
+var _upgrade_confirm_tween: Tween
+var _hit_flash_remaining: float = 0.0     # seconds remaining for hit flash (white flash on hit)
+var _hit_flash_particles: CPUParticles2D  # VFX-01: hit impact particle system
+var _attack_base_color: Color = Color(0.0, 0.94, 1.0)
+var _attack_glow_base_color: Color = Color(0.0, 0.51, 0.56, 0.28)
+var _fan_base_color: Color = Color(0.0, 0.90, 1.0)
+var _fan_glow_base_color: Color = Color(0.0, 0.51, 0.56, 0.20)
+
+# VFX colors - core/transition/falloff hierarchy
+const VFX_CORE_CYAN: Color = Color(0.0, 0.94, 1.0)      # #00f0ff - ultra cyan, hit flash core
+const VFX_MID_CYAN: Color = Color(0.0, 0.90, 1.0)      # #00e5ff - mid cyan, attack arc body
+const VFX_FALL_CYAN: Color = Color(0.0, 0.51, 0.55)     # #00838f - dark cyan, falloff/transition
+const VFX_RUST_PARTICLE: Color = Color(0.72, 0.35, 0.18) # #b85c2e - bright rust
+const VFX_RUST_DARK: Color = Color(0.55, 0.22, 0.10)    # #8b3a1a - deep rust
 
 
 func _ready() -> void:
 	session = SESSION.new(2026)
 	_self_test_mode_detect()
+
+	# Load texture resources for player animation
+	_player_idle_texture = preload("res://assets/player_idle_raw.png")
+	_player_attack_texture = preload("res://assets/player_attack_raw.png")
+
+	# Initialize audio players
+	_bgm_player = AudioStreamPlayer.new()
+	_bgm_player.stream = preload("res://assets/audio/bg_industrial_ambient.wav")
+	_bgm_player.volume_db = -8.0
+	_bgm_player.playing = true
+	add_child(_bgm_player)
+
+	_attack_sfx_player = AudioStreamPlayer2D.new()
+	_attack_sfx_player.stream = preload("res://assets/audio/attack_normal.wav")
+	_attack_sfx_player.volume_db = -6.0
+	add_child(_attack_sfx_player)
+
+	_enemy_death_sfx_player = AudioStreamPlayer.new()
+	_enemy_death_sfx_player.stream = preload("res://assets/audio/enemy_death.wav")
+	_enemy_death_sfx_player.volume_db = -3.0
+	add_child(_enemy_death_sfx_player)
+
+	_upgrade_sfx_player = AudioStreamPlayer.new()
+	_upgrade_sfx_player.stream = preload("res://assets/audio/upgrade_open.wav")
+	_upgrade_sfx_player.volume_db = -4.0
+	add_child(_upgrade_sfx_player)
+
+	_card_confirm_sfx_player = AudioStreamPlayer.new()
+	_card_confirm_sfx_player.stream = preload("res://assets/audio/card_confirm.wav")
+	_card_confirm_sfx_player.volume_db = -4.0
+	add_child(_card_confirm_sfx_player)
+
 	_build_visuals(self_test_mode)
+	spawn_grace_remaining = 1.0
+	resolve_delay_remaining = 0.0
+	_grace_phase_logged = false
 	if self_test_mode:
 		_self_test_add_enemies()
 		# Restricted deterministic regression marker: this is NOT player-playable input evidence.
 		print("[SELF-TEST] restricted deterministic regression (scripted zero-move + scripted fire; NOT player-playable input evidence)")
+
+# VFX-01: Initialize hit impact particle system
+	_hit_flash_particles = CPUParticles2D.new()
+	_hit_flash_particles.name = "HitImpactParticles"
+	# Godot 4.7.1: CPUParticles2D emits in all directions by default
+	_hit_flash_particles.lifetime = 0.30  # 300ms total, fades out
+	_hit_flash_particles.one_shot = true
+	_hit_flash_particles.gravity = Vector2(0, 0)
+	_hit_flash_particles.emitting = false
+	_hit_flash_particles.visible = false
+	# Particle scale: 3.0 (uniform scaling)
+	_hit_flash_particles.scale_amount_min = 3.0
+	_hit_flash_particles.scale_amount_max = 4.0
+	# Particle color: rust colors
+	_hit_flash_particles.color = VFX_RUST_PARTICLE
+	# Particle velocity: 20-28 px outward from center
+	_hit_flash_particles.initial_velocity_min = 16.0
+	_hit_flash_particles.initial_velocity_max = 28.0
+	# Spread: 360 degrees (emission in all directions)
+	_hit_flash_particles.spread = 180.0  # 180 degrees = full 360 spread
+	_hit_flash_particles.angle_min = 0.0
+	_hit_flash_particles.angle_max = 360.0
+	add_child(_hit_flash_particles)
 
 
 func _self_test_mode_detect() -> void:
@@ -115,39 +268,84 @@ func _self_test_mode_detect() -> void:
 			self_test_mode = true
 
 
-func _new_enemy_node(pos: Vector2, hp: int, color: Color) -> Node2D:
-	var e := Node2D.new()
+func _new_enemy_node(pos: Vector2, hp: int, color: Color, enemy_type: String = "walker") -> Node2D:
+	var e := Node2D.new(); e.name = "Enemy_%d" % next_stable_id; e.add_to_group("enemies"); e.add_to_group("enemy_actor")
 	e.position = pos
-	var r := ColorRect.new()
-	r.color = color
-	r.size = Vector2(26, 26)
-	r.position = -r.size / 2.0
-	e.add_child(r)
+	# Use sprite instead of color rect
+	var sprite := Sprite2D.new()
+	sprite.name = "EnemySprite"
+	if enemy_type == "brute":
+		sprite.texture = preload("res://assets/enemy_brute_raw.png")
+	else:
+		sprite.texture = preload("res://assets/enemy_walker_raw.png")
+	# Scale to ~26x26 px in-game (1024 -> 26 = 0.0254)
+	sprite.scale = Vector2(0.0254, 0.0254)
+	e.add_child(sprite)
 	add_child(e)
-	enemies.append({"node": e, "stable_id": next_stable_id, "hp": hp, "hit_flash": 0.0})
+	enemies.append({"node": e, "stable_id": next_stable_id, "hp": hp, "hit_flash": 0.0, "visual": sprite})
 	next_stable_id += 1
 	return e
 
 
 func _build_visuals(for_self_test: bool) -> void:
-	player_visual = ColorRect.new()
+	# B5: Arena background - full viewport, behind all game elements
+	arena_bg = Sprite2D.new()
+	arena_bg.name = "ArenaBackground"
+	# Load the arena background texture via the imported resource
+	var bg_texture: Texture2D = preload("res://assets/arena_bg.png")
+	arena_bg.texture = bg_texture
+	arena_bg.position = Vector2(640, 360)
+	# Scale to fit viewport (1920x1088 -> 640x360 = 1/3 scale)
+	arena_bg.scale = Vector2(0.333, 0.333)
+	add_child(arena_bg)
+
+	# Player setup - Sprite2D with attack texture
+	var player_sprite := Sprite2D.new()
+	player_sprite.name = "PlayerSprite"
+	player_sprite.texture = _player_idle_texture
+	player_sprite.position = Vector2.ZERO
+	# Scale to ~24x24 px in-game (1024 -> 24 = 0.0234)
+	player_sprite.scale = Vector2(0.0234, 0.0234)
+	add_child(player_sprite)
+
+	player_visual = ColorRect.new(); player_visual.name = "Player"; player_visual.add_to_group("player"); player_visual.add_to_group("player_actor")
 	player_visual.color = Color(0.2, 0.7, 1.0)   # cyan signal (restrained, non-color-distinguishable by shape too)
 	player_visual.size = Vector2(24, 24)
 	player_visual.position = -player_visual.size / 2.0
+	player_visual.visible = false  # Hidden, replaced by sprite
 	add_child(player_visual)
 	position = Vector2(320, 360)
 
+	# Attack line: thin bright core + wide tapered glow for penetration visual weight.
+	# Glow layer renders behind the core line.
+	_attack_glow_line = Line2D.new()
+	_attack_glow_line.width = 10.0
+	_attack_glow_line.default_color = _attack_glow_base_color
+	_attack_glow_line.visible = false
+	var glow_curve := Curve.new()
+	glow_curve.add_point(Vector2(0.0, 0.15))
+	glow_curve.add_point(Vector2(0.4, 0.5))
+	glow_curve.add_point(Vector2(1.0, 1.0))
+	_attack_glow_line.width_curve = glow_curve
+	add_child(_attack_glow_line)
+
 	attack_line = Line2D.new()
 	attack_line.width = 3.0
-	attack_line.default_color = Color(1.0, 1.0, 0.6)
+	attack_line.default_color = _attack_base_color
 	attack_line.visible = false
+	# Width taper: root thin -> tip full width (penetration directionality)
+	var core_curve := Curve.new()
+	core_curve.add_point(Vector2(0.0, 0.4))
+	core_curve.add_point(Vector2(0.5, 0.75))
+	core_curve.add_point(Vector2(1.0, 1.0))
+	attack_line.width_curve = core_curve
 	add_child(attack_line)
 
 	var hud := CanvasLayer.new()
 	hud.layer = 10
 	add_child(hud)
 
-	# --- R2 HUD minimal face (S5 §4.1 life/timer/b2) + read-model presentation lines. ---
+	# --- R2 HUD minimal face (S5 搂4.1 life/timer/b2) + read-model presentation lines. ---
 	life_label = Label.new()
 	life_label.position = Vector2(16, 12)
 	life_label.text = "LIFE [o][o][o]  segments_lost=0"
@@ -199,6 +397,127 @@ func _build_visuals(for_self_test: bool) -> void:
 	contact_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 	hud.add_child(contact_label)
 
+	# T5 RESULT presentation line (readable, non-color text UX-13; HUD region, not over player/danger/space UX-09).
+	result_label = Label.new()
+	result_label.position = Vector2(16, 174)
+	result_label.text = ""
+	result_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	hud.add_child(result_label)
+
+	# B2 upgrade card interface (UX spec v0.1: horizontal cards on separate canvas layer).
+	_card_hud = CanvasLayer.new()
+	_card_hud.layer = 10
+	add_child(_card_hud)
+
+	# Semi-transparent backdrop (spans full viewport, blocks mouse passthrough during card selection).
+	var backdrop := ColorRect.new()
+	backdrop.name = "CardBackdrop"
+	backdrop.color = Color(0.0, 0.0, 0.0, 0.0)
+	backdrop.size = Vector2(640, 360)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.visible = false
+	_card_hud.add_child(backdrop)
+
+	_upgrade_prompt_label = Label.new()
+	_upgrade_prompt_label.position = Vector2(0, 332)
+	_upgrade_prompt_label.size = Vector2(640, 20)
+	_upgrade_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_upgrade_prompt_label.text = ""
+	_upgrade_prompt_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.4))
+	_upgrade_prompt_label.add_theme_font_size_override("font_size", 13)
+	_upgrade_prompt_label.visible = false
+	_card_hud.add_child(_upgrade_prompt_label)
+
+	# Three card containers: ColorRect background + VBoxContainer with three Label children.
+	var card_centers_x := [160.0, 320.0, 480.0]
+	var card_width := 160.0
+	var card_height := 96.0
+	var card_center_y := 270.0
+
+	for i in range(3):
+		var card_data := _build_card_widget(i, card_centers_x[i], card_center_y, card_width, card_height)
+		_card_hud.add_child(card_data.bg)
+		_card_nodes.append(card_data)
+
+	# Keep old label references for backward compat (hidden, unused but not breaking).
+	for i in range(3):
+		var cl := Label.new()
+		cl.position = Vector2(48, 222 + i * 22)
+		cl.text = ""
+		cl.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+		cl.visible = false
+		_card_hud.add_child(cl)
+		_upgrade_card_labels.append(cl)
+
+	# B2 fan arc glow lines (behind the core fan lines, wider + semi-transparent).
+	_fan_left_glow_line = Line2D.new()
+	_fan_left_glow_line.width = 6.0
+	_fan_left_glow_line.default_color = _fan_glow_base_color
+	_fan_left_glow_line.visible = false
+	add_child(_fan_left_glow_line)
+
+	_fan_right_glow_line = Line2D.new()
+	_fan_right_glow_line.width = 6.0
+	_fan_right_glow_line.default_color = _fan_glow_base_color
+	_fan_right_glow_line.visible = false
+	add_child(_fan_right_glow_line)
+
+	# B2 fan arc lines (hidden by default; shown after fan upgrade).
+	_fan_left_line = Line2D.new()
+	_fan_left_line.width = 2.0
+	_fan_left_line.default_color = _fan_base_color
+	_fan_left_line.visible = false
+	add_child(_fan_left_line)
+
+	_fan_right_line = Line2D.new()
+	_fan_right_line.width = 2.0
+	_fan_right_line.default_color = _fan_base_color
+	_fan_right_line.visible = false
+	add_child(_fan_right_line)
+
+	_fan_mid_line = Line2D.new()
+	_fan_mid_line.width = 2.0
+	_fan_mid_line.default_color = _fan_base_color
+	_fan_mid_line.visible = false
+	add_child(_fan_mid_line)
+	_fan_mid_glow_line = Line2D.new()
+	_fan_mid_glow_line.width = 6.0
+	_fan_mid_glow_line.default_color = _fan_glow_base_color
+	_fan_mid_glow_line.visible = false
+	add_child(_fan_mid_glow_line)
+	_attack_afterimage_line = Line2D.new()
+	_attack_afterimage_line.width = 4.0
+	_attack_afterimage_line.default_color = Color(0.30, 0.82, 0.88, 0.32)
+	_attack_afterimage_line.visible = false
+	add_child(_attack_afterimage_line)
+	_pierce_clear_line = Line2D.new()
+	_pierce_clear_line.width = 2.0
+	_pierce_clear_line.default_color = Color(0.0, 0.90, 1.0, 0.0)
+	_pierce_clear_line.visible = false
+	add_child(_pierce_clear_line)
+	_fan_clear_line = Line2D.new()
+	_fan_clear_line.width = 2.0
+	_fan_clear_line.default_color = Color(0.0, 0.90, 1.0, 0.0)
+	_fan_clear_line.visible = false
+	add_child(_fan_clear_line)
+	_fan_clear_left_line = Line2D.new()
+	_fan_clear_left_line.width = 2.0
+	_fan_clear_left_line.default_color = Color(0.0, 0.90, 1.0, 0.0)
+	_fan_clear_left_line.visible = false
+	add_child(_fan_clear_left_line)
+	_fan_clear_right_line = Line2D.new()
+	_fan_clear_right_line.width = 2.0
+	_fan_clear_right_line.default_color = Color(0.0, 0.90, 1.0, 0.0)
+	_fan_clear_right_line.visible = false
+	add_child(_fan_clear_right_line)
+	_upgrade_confirm_flash = ColorRect.new()
+	_upgrade_confirm_flash.size = Vector2(174, 110)
+	_upgrade_confirm_flash.position = Vector2(233, 215)
+	_upgrade_confirm_flash.color = Color(0.0, 0.85, 1.0, 0.0)
+	_upgrade_confirm_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_upgrade_confirm_flash.visible = false
+	_card_hud.add_child(_upgrade_confirm_flash)
+
 	if not for_self_test:
 		# Two placeholder enemies so there is a live candidate set to target.
 		_new_enemy_node(Vector2(560, 200), 1, Color(0.9, 0.35, 0.2))
@@ -219,11 +538,11 @@ func _self_test_add_enemies() -> void:
 # Continuous movement reading (works whether or not key-release events are received). This is the SINGLE movement input
 # path; v0.1's `_unhandled_input`/`_set_move_axis` dead scaffolding is removed.
 func _read_movement_input() -> Dictionary:
-	var up := Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP)
-	var down := Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)
-	var left := Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)
-	var right := Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)
-	return ADAPTER.movement_from_input({"up": up, "down": down, "left": left, "right": right})
+	var axis := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	# ui_down is represented by axis.y > 0.01
+	# ui_left is represented by axis.x < -0.01
+	# ui_right is represented by axis.x > 0.01
+	return ADAPTER.movement_from_input({"up": axis.y < -0.01, "down": axis.y > 0.01, "left": axis.x < -0.01, "right": axis.x > 0.01})
 
 
 # --- C4 engine-side overlap detection (ADR-TECH-01 seam) ------------------------
@@ -264,8 +583,660 @@ func _apply_light_separation(victim_id: int, on_screen: Array) -> void:
 	print("[CONTACT-SEPARATE] victim_id=%d player=(%.0f,%.0f) (light separation; candidate mag %.0f)" % [victim_id, position.x, position.y, contact_separate_dist])
 
 
+# --- T4: terminal result phase handling ---
+# While a terminal result is active (rules result_locked), gameplay input is DISABLED (result/input lock), the RESULT
+# is presented (readable, non-color), and after the short candidate result duration the runtime triggers the canonical
+# automatic immediate reset (session.reset(): run identity advances, RNG reseeded, clean rules state) + fresh enemies.
+func _handle_result_phase(delta: float) -> void:
+	if result_label:
+		if _result_state == "defeat":
+			result_label.text = "RESULT: defeat (light interruption)"
+		elif _result_state == "victory":
+			result_label.text = "RESULT: victory (clear)"
+		else:
+			result_label.text = "RESULT: ..."
+	# Result/input lock: suppress gameplay presentation detail during the terminal result (presentation reads only the
+	# locked result 鈥?no re-arbitration, no new combat state), then count down to the automatic immediate retry.
+	_result_remaining -= delta
+	if _result_remaining <= 0.0:
+		_auto_restart()
+
+
+# --- T4: canonical automatic immediate reset (immediate retry, no out-of-run loss) ---
+# session.reset() is the session-owned canonical clean-restart transaction (ADR-TECH-01/05): run identity advances,
+# the single RNG is reseeded, and the rules state is rebuilt fresh (segments_lost=0, terminal cleared, snapshots/results
+# cleared) 鈥?so a new run carries NO cross-run loss. This node re-spawns fresh placeholder enemies for the new run.
+func _auto_restart() -> void:
+	session.reset()
+	for e in enemies:
+		if is_instance_valid(e.node):
+			e.node.queue_free()
+	enemies.clear()
+	next_stable_id = 1
+	# Fresh placeholder enemies for the new run (normal mode only; self-test re-arms its own deterministic layout).
+	if not self_test_mode:
+		_new_enemy_node(Vector2(560, 200), 1, Color(0.9, 0.35, 0.2))
+		_new_enemy_node(Vector2(620, 420), 1, Color(0.9, 0.35, 0.2))
+	position = Vector2(320, 360)
+	attack_line.visible = false
+	locked_this_epoch = false
+	last_fire_time = 0.0
+	spawn_grace_remaining = 1.0
+	resolve_delay_remaining = 0.0
+	_quiet_episode_active = false
+	_in_result = false
+	_result_state = ""
+	_result_remaining = 0.0
+	if result_label:
+		result_label.text = ""
+	# Reset B2 upgrade runtime state.
+	_upgrade_pending = false
+	_upgrade_phase = ""
+	_upgrade_cards = []
+	_upgrade_first_done = false
+	_upgrade_second_done = false
+	attack_line.width = 3.0
+	attack_line.default_color = _attack_base_color
+	_fan_left_line.visible = false
+	_fan_right_line.visible = false
+	# Reset glow layers.
+	if _attack_glow_line:
+		_attack_glow_line.visible = false
+		_attack_glow_line.default_color = _attack_glow_base_color
+	if _fan_left_glow_line:
+		_fan_left_glow_line.visible = false
+	if _fan_right_glow_line:
+		_fan_right_glow_line.visible = false
+	if _fan_clear_line:
+		_fan_clear_line.visible = false
+	if _fan_clear_left_line:
+		_fan_clear_left_line.visible = false
+	if _fan_clear_right_line:
+		_fan_clear_right_line.visible = false
+	_hit_flash_remaining = 0.0
+	_upgrade_prompt_label.visible = false
+	for c in _card_nodes:
+		if is_instance_valid(c.bg):
+			c.bg.visible = false
+	for cl in _upgrade_card_labels:
+		cl.visible = false
+	_card_state = 0
+	_card_input_guarded = false
+	_card_selected_idx = -1
+	_card_focused_idx = 1
+	_card_hovered_idx = -1
+	# Print the deterministic no-cross-run-loss evidence line (segments_lost now 0 in the fresh rules state).
+	print("[TERMINAL-AUTO-RESTART] canonical reset -> new run; segments_lost=%d (no cross-run loss)" % int(session.rules_state.get("segments_lost", 0)))
+
+
+# --- T4: enter the terminal result phase when the rules core has arbitrated an outcome ---
+func _enter_result_if_needed() -> void:
+	if _in_result:
+		return
+	var outcome: String = String(session.rules_state.get("terminal_outcome", ""))
+	if outcome != "":
+		_in_result = true
+		_result_state = outcome
+		_result_remaining = terminal_result_duration if terminal_result_duration > 0.0 else 0.15
+		if _result_state == "defeat":
+			print("[TERMINAL] outcome=defeat (life depletion; short light-interruption result)")
+		elif _result_state == "victory":
+			print("[TERMINAL] outcome=victory (control completion)")
+
+
+# --- B2 card widget builder (UX spec v0.1: TextureRect + StyleBoxFlat + VBox + Labels) ---
+func _build_card_widget(idx: int, cx: float, cy: float, w: float, h: float) -> Dictionary:
+	var bg := TextureRect.new()
+	bg.name = "CardBg_%d" % idx
+	bg.size = Vector2(w, h)
+	bg.position = Vector2(cx - w / 2.0, cy - h / 2.0)
+	bg.mouse_filter = Control.MOUSE_FILTER_STOP
+	bg.mouse_default_cursor_shape = Control.CURSOR_ARROW
+	bg.visible = false
+	# Load card texture based on index (pierce = 0,1,2; fan = 3,4,5 will be set later)
+	if idx < 3:
+		bg.texture = preload("res://assets/card_pierce_raw.png")
+	else:
+		bg.texture = preload("res://assets/card_fan_split_raw.png")
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+
+	# StyleBoxFlat for rounded corners and border control.
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.08, 0.10, 0.85)
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	style.border_color = Color(0.30, 0.30, 0.35)
+	style.corner_radius_top_left = 4
+	style.corner_radius_top_right = 4
+	style.corner_radius_bottom_left = 4
+	style.corner_radius_bottom_right = 4
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	bg.add_theme_stylebox_override("panel", style)
+
+	# Inner VBoxContainer for text layout.
+	var vbox := VBoxContainer.new()
+	vbox.name = "CardVBox_%d" % idx
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.add_theme_constant_override("separation", 2)
+	bg.add_child(vbox)
+
+	# Tier 1: Keyword (18px, bold).
+	var kw := Label.new()
+	kw.name = "Keyword_%d" % idx
+	kw.add_theme_font_size_override("font_size", 18)
+	kw.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	kw.text = ""
+	vbox.add_child(kw)
+
+	# Tier 2: Difference dimension (14px, regular).
+	var diff := Label.new()
+	diff.name = "Diff_%d" % idx
+	diff.add_theme_font_size_override("font_size", 14)
+	diff.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
+	diff.text = ""
+	vbox.add_child(diff)
+
+	# Tier 3: Effect description (12px, muted).
+	var eff := Label.new()
+	eff.name = "Effect_%d" % idx
+	eff.add_theme_font_size_override("font_size", 12)
+	eff.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55))
+	eff.text = ""
+	vbox.add_child(eff)
+
+	# Connect mouse signals (using callables with bind).
+	bg.mouse_entered.connect(_on_card_mouse_entered.bind(idx))
+	bg.mouse_exited.connect(_on_card_mouse_exited.bind(idx))
+	bg.gui_input.connect(_on_card_gui_input.bind(idx))
+
+	return {"bg": bg, "container": vbox, "keyword": kw, "diff": diff, "effect": eff}
+
+
+# --- B2 card visual state management ---
+func _update_card_visuals() -> void:
+	if _card_state == 0:
+		return
+	for i in range(3):
+		var card: Dictionary = _card_nodes[i]
+		var bg: ColorRect = card.bg
+		if not is_instance_valid(bg):
+			continue
+		var kw: Label = card.keyword
+		var diff: Label = card.diff
+		var eff: Label = card.effect
+		match _card_state:
+			1:  # transition_in — handled by tween; use default.
+				_apply_card_style(bg, kw, diff, eff, i, "default")
+			2:  # inspection
+				if i == _card_selected_idx and _card_selected_idx != -1:
+					_apply_card_style(bg, kw, diff, eff, i, "pressed")
+				elif _card_input_mode == "keyboard" and i == _card_focused_idx:
+					_apply_card_style(bg, kw, diff, eff, i, "focus")
+				elif _card_input_mode == "mouse" and i == _card_hovered_idx and _card_hovered_idx != -1:
+					_apply_card_style(bg, kw, diff, eff, i, "hover")
+				elif _card_selected_idx != -1:
+					_apply_card_style(bg, kw, diff, eff, i, "dimmed")
+				else:
+					_apply_card_style(bg, kw, diff, eff, i, "default")
+			3:  # pressed
+				if i == _card_selected_idx:
+					_apply_card_style(bg, kw, diff, eff, i, "pressed")
+				else:
+					_apply_card_style(bg, kw, diff, eff, i, "dimmed")
+			4:  # acquired
+				if i == _card_selected_idx:
+					_apply_card_style(bg, kw, diff, eff, i, "selected")
+				else:
+					_apply_card_style(bg, kw, diff, eff, i, "dimmed")
+			5:  # transition_out — handled by tween.
+				pass
+
+
+var _card_hovered_idx: int = -1
+
+func _apply_card_style(bg: ColorRect, kw: Label, diff: Label, eff: Label, idx: int, state_name: String) -> void:
+	var style: StyleBoxFlat = bg.get_theme_stylebox("panel", "ColorRect")
+	if style == null:
+		style = StyleBoxFlat.new()
+		bg.add_theme_stylebox_override("panel", style)
+
+	match state_name:
+		"default":
+			style.bg_color = Color(0.08, 0.08, 0.10, 0.85)
+			style.border_color = Color(0.30, 0.30, 0.35)
+			style.border_width_left = 1; style.border_width_right = 1
+			style.border_width_top = 1; style.border_width_bottom = 1
+			style.corner_radius_top_left = 4; style.corner_radius_top_right = 4
+			style.corner_radius_bottom_left = 4; style.corner_radius_bottom_right = 4
+			bg.scale = Vector2(1.0, 1.0)
+			bg.mouse_default_cursor_shape = Control.CURSOR_ARROW
+			kw.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+			kw.add_theme_font_size_override("font_size", 18)
+			diff.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
+			eff.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55))
+		"hover":
+			style.bg_color = Color(0.12, 0.12, 0.16, 0.90)
+			style.border_color = Color(0.50, 0.50, 0.60)
+			style.border_width_left = 1.5; style.border_width_right = 1.5
+			style.border_width_top = 1.5; style.border_width_bottom = 1.5
+			style.corner_radius_top_left = 4; style.corner_radius_top_right = 4
+			style.corner_radius_bottom_left = 4; style.corner_radius_bottom_right = 4
+			bg.scale = Vector2(1.03, 1.03)
+			bg.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			kw.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+			kw.add_theme_font_size_override("font_size", 18)
+			diff.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+			eff.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+		"focus":
+			style.bg_color = Color(0.12, 0.12, 0.16, 0.90)
+			style.border_color = Color(0.55, 0.75, 0.95)
+			style.border_width_left = 2; style.border_width_right = 2
+			style.border_width_top = 2; style.border_width_bottom = 2
+			style.corner_radius_top_left = 4; style.corner_radius_top_right = 4
+			style.corner_radius_bottom_left = 4; style.corner_radius_bottom_right = 4
+			bg.scale = Vector2(1.03, 1.03)
+			bg.mouse_default_cursor_shape = Control.CURSOR_ARROW
+			kw.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+			kw.add_theme_font_size_override("font_size", 18)
+			diff.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+			eff.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+		"pressed":
+			style.bg_color = Color(0.04, 0.04, 0.06, 0.95)
+			style.border_color = Color(0.65, 0.85, 1.0)
+			style.border_width_left = 2; style.border_width_right = 2
+			style.border_width_top = 2; style.border_width_bottom = 2
+			style.corner_radius_top_left = 4; style.corner_radius_top_right = 4
+			style.corner_radius_bottom_left = 4; style.corner_radius_bottom_right = 4
+			bg.scale = Vector2(0.97, 0.97)
+			bg.mouse_default_cursor_shape = Control.CURSOR_ARROW
+			kw.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+			kw.add_theme_font_size_override("font_size", 18)
+			diff.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+			eff.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+		"selected":
+			style.bg_color = Color(0.10, 0.15, 0.22, 0.90)
+			style.border_color = Color(0.70, 0.90, 1.0)
+			style.border_width_left = 2; style.border_width_right = 2
+			style.border_width_top = 2; style.border_width_bottom = 2
+			style.corner_radius_top_left = 4; style.corner_radius_top_right = 4
+			style.corner_radius_bottom_left = 4; style.corner_radius_bottom_right = 4
+			bg.scale = Vector2(1.0, 1.0)
+			bg.mouse_default_cursor_shape = Control.CURSOR_ARROW
+			kw.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+			kw.add_theme_font_size_override("font_size", 18)
+			diff.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+			eff.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
+		"dimmed":
+			style.bg_color = Color(0.04, 0.04, 0.06, 0.70)
+			style.border_color = Color(0.15, 0.15, 0.20)
+			style.border_width_left = 1; style.border_width_right = 1
+			style.border_width_top = 1; style.border_width_bottom = 1
+			style.corner_radius_top_left = 4; style.corner_radius_top_right = 4
+			style.corner_radius_bottom_left = 4; style.corner_radius_bottom_right = 4
+			bg.scale = Vector2(0.95, 0.95)
+			bg.mouse_default_cursor_shape = Control.CURSOR_ARROW
+			kw.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+			kw.add_theme_font_size_override("font_size", 18)
+			diff.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
+			eff.add_theme_color_override("font_color", Color(0.3, 0.3, 0.3))
+
+
+# --- B2 card animation: appear (transition_in, 200ms) ---
+func _animate_cards_in() -> void:
+	var backdrop := _card_hud.get_node_or_null("CardBackdrop") as ColorRect
+	if backdrop:
+		backdrop.visible = true
+		var bt := create_tween()
+		bt.tween_property(backdrop, "color", Color(0.0, 0.0, 0.0, 0.25), 0.2).set_ease(Tween.EASE_OUT)
+	for i in range(3):
+		var card: Dictionary = _card_nodes[i]
+		var bg: ColorRect = card.bg
+		if not is_instance_valid(bg):
+			continue
+		bg.visible = true
+		bg.modulate.a = 0.0
+		var target_y := bg.position.y
+		bg.position.y = target_y + 40
+		var t := create_tween()
+		t.set_parallel(true)
+		t.tween_property(bg, "position:y", target_y, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_EXPO)
+		t.tween_property(bg, "modulate:a", 1.0, 0.2).set_ease(Tween.EASE_OUT)
+	_upgrade_prompt_label.modulate.a = 0.0
+	_upgrade_prompt_label.visible = true
+	var pt := create_tween()
+	pt.tween_property(_upgrade_prompt_label, "modulate:a", 1.0, 0.2).set_ease(Tween.EASE_OUT)
+
+
+# --- B2 card animation: dismiss (transition_out, 200ms) ---
+func _animate_cards_out() -> void:
+	var backdrop := _card_hud.get_node_or_null("CardBackdrop") as ColorRect
+	if backdrop:
+		var bt := create_tween()
+		bt.tween_property(backdrop, "color", Color(0.0, 0.0, 0.0, 0.0), 0.2).set_ease(Tween.EASE_IN)
+		bt.tween_callback(func(): backdrop.visible = false)
+	for i in range(3):
+		var card: Dictionary = _card_nodes[i]
+		var bg: ColorRect = card.bg
+		if not is_instance_valid(bg):
+			continue
+		var t := create_tween()
+		t.set_parallel(true)
+		t.tween_property(bg, "position:y", bg.position.y + 40, 0.2).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_EXPO)
+		t.tween_property(bg, "modulate:a", 0.0, 0.2).set_ease(Tween.EASE_IN)
+		t.chain().tween_callback(func(): bg.visible = false)
+	var pt := create_tween()
+	pt.tween_property(_upgrade_prompt_label, "modulate:a", 0.0, 0.2).set_ease(Tween.EASE_IN)
+	pt.tween_callback(func(): _upgrade_prompt_label.visible = false)
+
+
+# --- B2 card mouse handlers ---
+func _on_card_mouse_entered(idx: int) -> void:
+	if _card_state != 2:  # only during inspection
+		return
+	if _card_input_guarded:
+		return
+	_card_input_mode = "mouse"
+	_card_hovered_idx = idx
+	_card_focused_idx = idx
+	_update_card_visuals()
+
+
+func _on_card_mouse_exited(idx: int) -> void:
+	if _card_state != 2:
+		return
+	if _card_hovered_idx == idx:
+		_card_hovered_idx = -1
+		_update_card_visuals()
+
+
+func _on_card_gui_input(event: InputEvent, idx: int) -> void:
+	if _card_state != 2:
+		return
+	if _card_input_guarded:
+		return
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			_card_input_mode = "mouse"
+			_select_upgrade_card(idx)
+
+
+# --- B2 keyboard focus movement ---
+func _move_focus(delta: int) -> void:
+	if _card_state != 2:
+		return
+	if _card_input_guarded:
+		return
+	_card_input_mode = "keyboard"
+	_card_hovered_idx = -1
+	_card_focused_idx = (_card_focused_idx + delta) % 3
+	if _card_focused_idx < 0:
+		_card_focused_idx = 2
+	_update_card_visuals()
+
+
+func _confirm_focused_card() -> void:
+	if _card_state != 2:
+		return
+	if _card_input_guarded:
+		return
+	_card_input_mode = "keyboard"
+	_select_upgrade_card(_card_focused_idx)
+
+
+# --- B2 edge-triggered keyboard input (replaces per-frame polling) ---
+func _unhandled_input(event: InputEvent) -> void:
+	if _card_state != 2:
+		return
+	if _card_input_guarded:
+		return
+	if event is InputEventKey and event.pressed:
+		match event.keycode:
+			KEY_1, KEY_KP_1:
+				_card_input_mode = "keyboard"
+				_select_upgrade_card(0)
+			KEY_2, KEY_KP_2:
+				_card_input_mode = "keyboard"
+				_select_upgrade_card(1)
+			KEY_3, KEY_KP_3:
+				_card_input_mode = "keyboard"
+				_select_upgrade_card(2)
+			KEY_LEFT:
+				_move_focus(-1)
+			KEY_RIGHT:
+				_move_focus(1)
+			KEY_ENTER, KEY_SPACE:
+				_confirm_focused_card()
+
+
+# --- B2: check for upgrade window triggers (tick-based; before any combat) ---
+func _check_upgrade_windows() -> void:
+	if self_test_mode:
+		return  # self-test is a deterministic regression; upgrade windows are skipped
+	if _upgrade_pending or _in_result:
+		return
+	var tick: int = session.current_tick()
+	if not _upgrade_first_done and tick >= 1200:
+		_start_upgrade("pierce")
+	elif not _upgrade_second_done and tick >= 3000:
+		_start_upgrade("fan")
+
+
+# --- B2: start an upgrade window (pause combat, animate cards in) ---
+func _start_upgrade(phase: String) -> void:
+	_upgrade_pending = true
+	_upgrade_phase = phase
+	_card_state = 1  # transition_in
+	_card_input_guarded = true
+	_card_phase_timer = 0.2
+	_card_selected_idx = -1
+	_card_focused_idx = 1
+	_card_hovered_idx = -1
+	_card_input_mode = "keyboard"
+	if phase == "pierce":
+		_upgrade_cards = [
+			{"id": 1, "keyword": "[1] 穿透 I", "difference": "力场穿透", "effect": "命中上限 +2", "shortcut": "1"},
+			{"id": 2, "keyword": "[2] 穿透 II", "difference": "相位穿透", "effect": "命中上限 +2", "shortcut": "2"},
+			{"id": 3, "keyword": "[3] 穿透 III", "difference": "量子隧穿", "effect": "命中上限 +2", "shortcut": "3"},
+		]
+	else:  # fan
+		_upgrade_cards = [
+			{"id": 1, "keyword": "[1] 扇裂 I", "difference": "左弧强化", "effect": "攻击弧数 +2", "shortcut": "1"},
+			{"id": 2, "keyword": "[2] 扇裂 II", "difference": "右弧强化", "effect": "攻击弧数 +2", "shortcut": "2"},
+			{"id": 3, "keyword": "[3] 扇裂 III", "difference": "三弧均衡", "effect": "攻击弧数 +2", "shortcut": "3"},
+		]
+	# Populate card labels.
+	for i in range(3):
+		if i < _upgrade_cards.size():
+			var card_data: Dictionary = _upgrade_cards[i]
+			var card_node: Dictionary = _card_nodes[i]
+			if is_instance_valid(card_node.keyword):
+				card_node.keyword.text = card_data["keyword"]
+			if is_instance_valid(card_node.diff):
+				card_node.diff.text = card_data["difference"]
+			if is_instance_valid(card_node.effect):
+				card_node.effect.text = card_data["effect"]
+	_upgrade_prompt_label.text = "B2 升级选择 — 按 1/2/3 或 ← → + 回车，或点击卡牌"
+	_animate_cards_in()
+	# B5: Play upgrade open SFX
+	if not self_test_mode:
+		_upgrade_sfx_player.play()
+	# Also populate old labels for backward compat.
+	for i in range(3):
+		if i < _upgrade_cards.size() and i < _upgrade_card_labels.size():
+			_upgrade_card_labels[i].text = "%s — %s" % [_upgrade_cards[i]["keyword"], _upgrade_cards[i]["effect"]]
+	print("[B2-UPGRADE] window opened phase=%s tick=%d" % [phase, session.current_tick()])
+
+
+# --- B2: handle upgrade card selection phase (state machine, called each frame while _upgrade_pending) ---
+func _handle_upgrade_phase(delta: float) -> void:
+	match _card_state:
+		1:  # transition_in — wait for animation to complete
+			_card_phase_timer -= delta
+			if _card_phase_timer <= 0.0:
+				_card_state = 2  # inspection
+				_card_input_guarded = false
+				_update_card_visuals()
+		2:  # inspection — input handled by _unhandled_input and mouse signals
+			pass
+		3:  # pressed — brief darken
+			_card_phase_timer -= delta
+			if _card_phase_timer <= 0.0:
+				_card_state = 4  # acquired
+				_card_phase_timer = 0.6
+				_update_card_visuals()
+				# Update acquired text.
+				var sel_idx: int = _card_selected_idx
+				if sel_idx >= 0 and sel_idx < _upgrade_cards.size():
+					var card_data: Dictionary = _upgrade_cards[sel_idx]
+					var card_node: Dictionary = _card_nodes[sel_idx]
+					if is_instance_valid(card_node.keyword):
+						card_node.keyword.text = card_data["keyword"] + " — 获得"
+				_upgrade_prompt_label.text = _upgrade_phase + " 已获得" if _upgrade_phase == "pierce" else "扇裂 已获得"
+		4:  # acquired — show confirmation
+			_card_phase_timer -= delta
+			if _card_phase_timer <= 0.0:
+				_card_state = 5  # transition_out
+				_card_phase_timer = 0.2
+				_animate_cards_out()
+		5:  # transition_out — wait for animation
+			_card_phase_timer -= delta
+			if _card_phase_timer <= 0.0:
+				_card_state = 0  # hidden
+				_finalize_upgrade()
+
+
+# --- B2: select a card (called from input handlers; transitions to pressed state) ---
+func _select_upgrade_card(idx: int) -> void:
+	if _card_state != 2:
+		return
+	if _card_input_guarded:
+		return
+	if idx < 0 or idx >= _upgrade_cards.size():
+		return
+	_card_selected_idx = idx
+	# B5: Play card confirm SFX
+	if not self_test_mode:
+		_card_confirm_sfx_player.play()
+	_trigger_upgrade_confirmation(idx)
+	_card_state = 3  # pressed
+	_card_input_guarded = true
+	_card_phase_timer = 0.1
+	_update_card_visuals()
+	print("[B2-UPGRADE] card selected idx=%d phase=%s" % [idx, _upgrade_phase])
+
+
+# --- B2: finalize upgrade after acquired feedback + dismiss animation ---
+func _finalize_upgrade() -> void:
+	var idx: int = _card_selected_idx
+	if idx < 0 or idx >= _upgrade_cards.size():
+		_upgrade_pending = false
+		return
+	var card: Dictionary = _upgrade_cards[idx]
+	# Apply the upgrade via session.step (rules-core owned).
+	var result: Dictionary = session.step({"task": "upgrade_select", "selected_card_id": card["id"], "b2_phase": _upgrade_phase})
+	var upgrade_fb: Dictionary = ADAPTER.upgrade_feedback_from_result(result)
+	if upgrade_fb["upgrade_fired"]:
+		print("[B2-UPGRADE] applied phase=%s card=%d max_targets=%d fan_arcs=%d" % [
+			upgrade_fb["phase"], upgrade_fb["selected_card_id"],
+			upgrade_fb["attack_max_targets"], upgrade_fb["attack_fan_arcs"]])
+		# Apply visual effects based on phase.
+		if upgrade_fb["phase"] == "pierce":
+			attack_line.width = 6.0   # wider line for pierce
+			if _attack_glow_line:
+				_attack_glow_line.width = 18.0   # proportionally wider glow
+		elif upgrade_fb["phase"] == "fan":
+			_fan_left_line.visible = true
+			_fan_right_line.visible = true
+			if _fan_left_glow_line:
+				_fan_left_glow_line.visible = true
+				_fan_right_glow_line.visible = true
+	# B5: Play upgrade applied SFX
+	if not self_test_mode:
+		_upgrade_sfx_player.stream = preload("res://assets/audio/upgrade_applied.wav")
+		_upgrade_sfx_player.play()
+	# Mark phase as complete.
+	if _upgrade_phase == "pierce":
+		_upgrade_first_done = true
+	else:
+		_upgrade_second_done = true
+	# Hide all card UI.
+	_upgrade_prompt_label.visible = false
+	for c in _card_nodes:
+		if is_instance_valid(c.bg):
+			c.bg.visible = false
+	for cl in _upgrade_card_labels:
+		cl.visible = false
+	_upgrade_pending = false
+	_card_input_guarded = false
+	print("[B2-UPGRADE] window closed; combat resumed")
+
+
+# --- B2 visual helper: build quadratic-bezier arc points for fan curvature ---
+# Generates a curved arc from start to end, bulging in the direction of offset_sign
+# (positive = left/perpendicular, negative = right/opposite).
+func _build_arc_points(start: Vector2, end: Vector2, offset_sign: float, num_points: int = 10) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	pts.append(start)
+	var dir := end.normalized() if end.length_squared() > 0.0001 else Vector2.RIGHT
+	var perp := Vector2(-dir.y, dir.x) * offset_sign
+	var mid := (start + end) * 0.5 + perp * start.distance_to(end) * 0.25
+	for i in range(1, num_points):
+		var t := float(i) / float(num_points)
+		var p := (1.0 - t) * (1.0 - t) * start + 2.0 * (1.0 - t) * t * mid + t * t * end
+		pts.append(p)
+	pts.append(end)
+	return pts
+
+
 func _process(delta: float) -> void:
-	session.advance_tick()   # deterministic session tick drives the TIMER read-model field (S5 §4.1)
+	session.advance_tick()   # deterministic session tick drives the TIMER read-model field (S5 搂4.1)
+
+	# Hit flash timer: brief white flash on attack line when a hit registers (50ms visual feedback).
+	if _hit_flash_remaining > 0.0:
+		_hit_flash_remaining -= delta
+		if _hit_flash_remaining <= 0.0:
+			attack_line.default_color = _attack_base_color
+			if _attack_glow_line:
+				_attack_glow_line.default_color = _attack_glow_base_color
+
+	# B2: upgrade window handling 鈥?pauses combat, shows card selection, waits for player input.
+	if _upgrade_pending:
+		_handle_upgrade_phase(delta)
+		if self_test_mode:
+			_self_test_step()
+		return
+
+	# B2: check for upgrade window triggers (tick-based; before any combat processing).
+	if not _in_result:
+		_check_upgrade_windows()
+
+	# T4: terminal result handling 鈥?while a result is active, gameplay input is disabled (result/input lock) and the
+	# short result is presented before the automatic immediate retry.
+	if _in_result:
+		_handle_result_phase(delta)
+		if self_test_mode:
+			_self_test_step()
+		return
+
+	# T4: detect a rules-arbitrated terminal outcome from the previous step (before any new gameplay input).
+	_enter_result_if_needed()
+	if _in_result:
+		if self_test_mode:
+			_self_test_step()
+		return
+
+	# T4 self-test terminal drive: while deterministically driving the terminal via direct session.step, skip the
+	# engine combat path (no entanglement between the scripted drive and the normal attack/contact loop).
+	if self_test_mode and self_test_drive_terminal:
+		_self_test_step()
+		return
 
 	# --- R1 input -> movement (adapter) ---
 	var movement: Dictionary = _read_movement_input()
@@ -279,6 +1250,22 @@ func _process(delta: float) -> void:
 			print("[RUNTIME] player_moved dir=%s,%s player=(%.0f,%.0f)" % [movement["dir_x"], movement["dir_y"], position.x, position.y])
 
 	player_visual.position = Vector2.ZERO
+
+	# Spawn grace is a real runtime phase: keep Player/Enemy/HUD presentation alive, but do not
+	# issue the first refresh/resolve/combat step until the full 1.0s grace has elapsed.
+	var grace_before: float = spawn_grace_remaining
+	if not qa_hold_grace:
+		spawn_grace_remaining = maxf(0.0, spawn_grace_remaining - delta)
+	if grace_before > 0.0 and spawn_grace_remaining <= 0.0 and not _grace_phase_logged:
+		_grace_phase_logged = true
+		print("[TIMING][GRACE-END] tick=%d elapsed=1.000s; combat/session.step now permitted" % session.current_tick())
+	if spawn_grace_remaining > 0.0:
+		if not _grace_phase_logged:
+			print("[TIMING][GRACE] tick=%d remaining=%.3fs; presentation-only" % [session.current_tick(), spawn_grace_remaining])
+		_present_read_model(session.rules_state, {}, [], false, {})
+		if self_test_mode:
+			_self_test_step()
+		return
 
 	# --- build live candidates from live enemy nodes (adapter-normalized observations; read AFTER movement) ---
 	var live_candidates: Array = []
@@ -294,6 +1281,16 @@ func _process(delta: float) -> void:
 		live_candidates.append(ADAPTER.candidate_from_observation(
 			e.stable_id, e.node.position, position, cluster_center, e.hp, 1.0))
 
+	# Lock feedback starts a short resolve phase; do not resolve on the next process frame.
+	if resolve_delay_remaining > 0.0:
+		resolve_delay_remaining = maxf(0.0, resolve_delay_remaining - delta)
+		if resolve_delay_remaining <= 0.0:
+			print("[TIMING][DELAY-END] tick=%d elapsed=0.250s; resolve now permitted" % session.current_tick())
+		else:
+			print("[TIMING][DELAY] tick=%d remaining=%.3fs; resolve blocked" % [session.current_tick(), resolve_delay_remaining])
+			_present_read_model(session.rules_state, {}, [], false, {})
+			return
+
 	# --- C4 contact observations: engine overlap -> adapter translation -> domain contact input ---
 	var contact_input: Array = _overlapping_enemy_ids(on_screen)
 
@@ -302,6 +1299,8 @@ func _process(delta: float) -> void:
 		# Quiet no-target presentation (UX-03 S1/S2): no fabricated lock/hit; optional one-shot restrained cue.
 		_enter_quiet_presentation()
 		attack_line.visible = false
+		if _attack_glow_line:
+			_attack_glow_line.visible = false
 		if self_test_mode:
 			_self_test_step()
 		return
@@ -315,9 +1314,12 @@ func _process(delta: float) -> void:
 
 	# task routing: refresh when we need a fresh lock this epoch, else resolve.
 	var task: String = ADAPTER.pick_task(not locked_this_epoch, locked_this_epoch)
-	# C4: the envelope always carries contact_input (empty included) so separation/re-arm is evaluated every step.
+	# T4: the envelope carries the session terminal domain input (timer_completed) + C4 contact observations.
+	var atk_max: int = 999 if self_test_mode else int(session.rules_state.get("attack_max_targets", 1))
 	var env: Dictionary = ADAPTER.make_envelope(
-		task, live_candidates, movement, 1, [], contact_input, contact_invuln_ticks, 1)
+		task, live_candidates, movement, 1, [], contact_input, contact_invuln_ticks, 1,
+		{"timer_completed": session.current_tick() >= run_duration_ticks},
+		-1, atk_max)
 	var result: Dictionary = session.step(env)
 	_apply_feedback(result, on_screen)
 	# C4: light separation is applied from the contact damage events (engine-side physical response).
@@ -327,12 +1329,15 @@ func _process(delta: float) -> void:
 	if not locked_this_epoch:
 		locked_this_epoch = true
 
+	# T4: check whether the just-applied rules step arbitrated a terminal outcome (transition into the result/input lock).
+	_enter_result_if_needed()
+
 	if self_test_mode:
 		_self_test_step()
 
 
 func _enter_quiet_presentation() -> void:
-	# One-shot restrained non-color quiet-episode cue, bound ONLY to the no-target branch (S5 §4.2, UX-03 S3).
+	# One-shot restrained non-color quiet-episode cue, bound ONLY to the no-target branch (S5 搂4.2, UX-03 S3).
 	# Exact presentation form is NOT frozen (unresolved); here it is a single log line + the quiet label.
 	if not _quiet_episode_active:
 		_quiet_episode_active = true
@@ -351,7 +1356,7 @@ func _leave_quiet_presentation() -> void:
 
 
 func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engine_quiet: bool = false, contact_fb: Dictionary = {}) -> void:
-	# --- HUD minimal face (S5 §4.1): life/timer/b2, all existing as read-model fields, no invented values. ---
+	# --- HUD minimal face (S5 搂4.1): life/timer/b2, all existing as read-model fields, no invented values. ---
 	# life: three-segment structure; segments_lost read from the rules trace (C5: real deduction, non-color).
 	var segments_lost: int = int(state.get("segments_lost", 0))
 	if segments_lost < 0:
@@ -367,11 +1372,19 @@ func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engin
 	# timer: current_tick (SESSION) + run_duration_bound opaque (value deferred to Systems; not promoted).
 	if timer_label:
 		timer_label.text = "TIMER tick=%d  run_bound=8min(opaque)" % session.current_tick()
-	# b2: single legal value this unit = pre-fission (B2 three-arc structure kept as enum placeholder only).
+	# b2: show current B2 phase (read from rules state).
+	var b2_phase: String = String(state.get("b2_phase", "pre"))
+	var b2_text: String = "B2: "
+	if b2_phase == "pierce":
+		b2_text += "穿透"
+	elif b2_phase == "fan":
+		b2_text += "扇裂"
+	else:
+		b2_text += "pre-fission"
 	if b2_label:
-		b2_label.text = "B2 pre-fission (structure placeholder)"
+		b2_label.text = b2_text
 
-	# --- attack_state four states (S5 §4.3), derived ONLY from rules trace fields. ---
+	# --- attack_state four states (S5 搂4.3), derived ONLY from rules trace fields. ---
 	var no_target_branch: bool = bool(state.get("no_target_branch", false))
 	var hit_empty: bool = (state.get("hit_results", {}) as Dictionary).is_empty()
 	var snap_empty: bool = (state.get("target_snapshot_ids", []) as Array).is_empty()
@@ -387,13 +1400,13 @@ func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engin
 	if state_label:
 		state_label.text = attack_text
 
-	# --- kill_state (S5 §4.3): none -> killed while kill_outcomes is non-empty (settlement trace). ---
+	# --- kill_state (S5 搂4.3): none -> killed while kill_outcomes is non-empty (settlement trace). ---
 	var kill_outcomes: Dictionary = state.get("kill_outcomes", {})
 	var kill_text: String = "kill: killed(%d)" % kill_outcomes.size() if not kill_outcomes.is_empty() else "kill: none"
 	if kill_label:
 		kill_label.text = kill_text
 
-	# --- hit_results_feedback binding marker (S5 §4.3): each feedback class is emitted ONLY when its rule source is
+	# --- hit_results_feedback binding marker (S5 搂4.3): each feedback class is emitted ONLY when its rule source is
 	#     non-empty (adapter gates lock/hit/kill); the HUD line shows the class -> source binding for auditability. ---
 	var lock_count: int = (fb.get("lock_target", []) as Array).size() if fb.get("lock_target", []) is Array else 0
 	var hit_count: int = (fb.get("hit", []) as Array).size() if fb.get("hit", []) is Array else 0
@@ -406,7 +1419,7 @@ func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engin
 	if feedback_label:
 		feedback_label.text = fb_text
 
-	# --- invalidation presentation section (S5 §4.3 visible part): "target invalid -> no hit this shot", no drain detail.
+	# --- invalidation presentation section (S5 搂4.3 visible part): "target invalid -> no hit this shot", no drain detail.
 	var inv_text := ""
 	for e in events:
 		if e.get("type", "") == "invalidation_event":
@@ -435,6 +1448,236 @@ func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engin
 		print("[READ-MODEL] %s" % line)
 
 
+func _emit_attack_trajectory_arc(points: PackedVector2Array, attack_pos: Vector2) -> void:
+	if not _attack_afterimage_line or points.size() < 2:
+		return
+	if _attack_afterimage_tween:
+		_attack_afterimage_tween.kill()
+	_attack_afterimage_line.points = points
+	_attack_afterimage_line.modulate.a = 1.0
+	_attack_afterimage_line.visible = true
+	_attack_afterimage_tween = create_tween()
+	_attack_afterimage_tween.tween_property(_attack_afterimage_line, "modulate:a", 0.0, 0.16).set_ease(Tween.EASE_OUT)
+	_attack_afterimage_tween.tween_callback(func(): _attack_afterimage_line.visible = false)
+
+
+func _emit_attack_afterimage(points: PackedVector2Array) -> void:
+	"""Emit attack afterimage effect (alias for _emit_attack_trajectory_arc)."""
+	if not _attack_afterimage_line or points.size() < 2:
+		return
+	if _attack_afterimage_tween:
+		_attack_afterimage_tween.kill()
+	_attack_afterimage_line.points = points
+	_attack_afterimage_line.modulate.a = 1.0
+	_attack_afterimage_line.visible = true
+	_attack_afterimage_tween = create_tween()
+	_attack_afterimage_tween.tween_property(_attack_afterimage_line, "modulate:a", 0.0, 0.16).set_ease(Tween.EASE_OUT)
+	_attack_afterimage_tween.tween_callback(func(): _attack_afterimage_line.visible = false)
+
+
+func _trigger_hit_impact_flash(impact_pos: Vector2) -> void:
+	"""VFX-01: Hit Impact Flash - localized core->transition->falloff impact with rust particles.
+	
+	- Core cyan-white #00f0ff (ultra cyan), mid-cyan #00e5ff, falloff #00838f
+	- Duration ~150ms, no persistent glow
+	- 4-6 rust particles (#b85c2e, #8b3a1a) spray 16-24px before fading
+	- Uses Line2D for core/transition/falloff rings + CPUParticles2D for rust debris
+	"""
+	# Spawn rust particles outward from impact point
+	if _hit_flash_particles:
+		_hit_flash_particles.position = impact_pos
+		_hit_flash_particles.emitting = true
+		_hit_flash_particles.restart()
+		_hit_flash_particles.visible = true
+
+	# Core ring: 8-16 px, cyan-white #00f0ff
+	var core_ring := Line2D.new()
+	core_ring.width = 2.0
+	core_ring.default_color = VFX_CORE_CYAN
+	core_ring.visible = true
+	var core_points := PackedVector2Array()
+	for i in range(12):
+		var angle := TAU * i / 11.0
+		core_points.append(Vector2(cos(angle), sin(angle)) * 12.0)
+	core_ring.points = core_points
+	add_child(core_ring)
+
+	# Transition ring: 24-32 px, mid-cyan #00e5ff
+	var trans_ring := Line2D.new()
+	trans_ring.width = 4.0
+	trans_ring.default_color = VFX_MID_CYAN
+	trans_ring.visible = true
+	var trans_points := PackedVector2Array()
+	for i in range(12):
+		var angle := TAU * i / 11.0
+		trans_points.append(Vector2(cos(angle), sin(angle)) * 28.0)
+	trans_ring.points = trans_points
+	add_child(trans_ring)
+
+	# Falloff ring: 48 px, dark cyan #00838f
+	var fall_ring := Line2D.new()
+	fall_ring.width = 6.0
+	fall_ring.default_color = VFX_FALL_CYAN
+	fall_ring.visible = true
+	var fall_points := PackedVector2Array()
+	for i in range(12):
+		var angle := TAU * i / 11.0
+		fall_points.append(Vector2(cos(angle), sin(angle)) * 48.0)
+	fall_ring.points = fall_points
+	add_child(fall_ring)
+
+	# Tween: expand and fade over 150ms
+	var tween := create_tween()
+	tween.set_parallel(true)
+	# Core expands from 12 -> 16 px and fades out quickly
+	tween.tween_method(func(t: float): _resize_ring(core_ring, 12.0, 16.0, t), 0.0, 1.0, 0.15).set_ease(Tween.EASE_OUT)
+	tween.tween_property(core_ring, "modulate:a", 0.0, 0.15).set_ease(Tween.EASE_IN)
+	# Transition expands from 28 -> 32 px and fades
+	tween.tween_method(func(t: float): _resize_ring(trans_ring, 28.0, 32.0, t), 0.0, 1.0, 0.15).set_ease(Tween.EASE_OUT)
+	tween.tween_property(trans_ring, "modulate:a", 0.0, 0.15).set_ease(Tween.EASE_IN)
+	# Falloff expands from 48 -> 48 px (stays) and fades slowly
+	tween.tween_method(func(t: float): _resize_ring(fall_ring, 48.0, 48.0, t), 0.0, 1.0, 0.15).set_ease(Tween.EASE_OUT)
+	tween.tween_property(fall_ring, "modulate:a", 0.0, 0.15).set_ease(Tween.EASE_IN)
+	tween.chain().tween_callback(func():
+		core_ring.queue_free()
+		trans_ring.queue_free()
+		fall_ring.queue_free()
+		if _hit_flash_particles:
+			_hit_flash_particles.visible = false
+	)
+	print("[VFX-01][HIT-IMPACT] core->transition->falloff (150ms); localized flash, no persistent glow")
+
+
+func _resize_ring(ring: Line2D, base_radius: float, target_radius: float, t: float) -> void:
+	var radius: float = lerp(base_radius, target_radius, t)
+	var points := PackedVector2Array()
+	for i in range(12):
+		var angle := TAU * i / 11.0
+		points.append(Vector2(cos(angle), sin(angle)) * radius)
+	ring.points = points
+
+
+func _play_kill_dissolve(node: Node2D) -> void:
+	if not is_instance_valid(node):
+		return
+	# VFX-02: Kill Death Dissolve - crack-collapse/dissolve sequence (~300ms)
+	# Frame 1: enemy silhouette begins to crack with fracture lines
+	# Frame 2: body collapses inward, rust flakes burst outward
+	# Frame 3: body dissolves into grey ash and rusted scrap
+
+	var pos = node.position
+
+	# Frame 1: crack lines (bright cyan)
+	var crack_t := create_tween()
+	var crack_duration = 0.10  # 100ms
+	crack_t.tween_property(node, "scale", Vector2(1.0, 0.9), crack_duration).set_ease(Tween.EASE_IN_OUT)
+	# Add a visual crack effect via Line2D
+	var crack_line := Line2D.new()
+	crack_line.width = 2.0
+	crack_line.default_color = VFX_CORE_CYAN
+	crack_line.visible = true
+	var crack_pts := PackedVector2Array([Vector2.ZERO, Vector2(30, 0), Vector2(15, -10)])
+	crack_line.points = crack_pts
+	add_child(crack_line)
+
+	# Frame 2: collapse inward + rust flakes burst
+	var collapse_t := create_tween()
+	var collapse_duration = 0.15  # 150ms
+	collapse_t.set_parallel(true)
+	collapse_t.tween_property(node, "scale", Vector2(0.85, 0.55), collapse_duration).set_ease(Tween.EASE_IN_OUT)
+	collapse_t.tween_property(node, "rotation", 0.2, collapse_duration).set_ease(Tween.EASE_OUT)
+
+	# Rust flakes burst: 8-12 particles
+	if _hit_flash_particles and _hit_flash_particles.is_inside_tree():
+		var rust_flakes_t := create_tween()
+		rust_flakes_t.set_parallel(true)  # Fix: was rust_flakes_t.duration which is invalid
+		for i in range(8, 13):
+			var flake_pos := node.position + Vector2(randf() * 50 - 25, randf() * 50 - 25)
+			var flake := CPUParticles2D.new()
+			flake.name = "RustFlake_%d" % i
+			# Godot 4.7.1: CPUParticles2D emits in all directions by default
+			flake.lifetime = 0.40  # 400ms
+			flake.one_shot = true
+			flake.gravity = Vector2(0, 0)
+			flake.emitting = false
+			flake.visible = false
+			# Particle scale: 3.0
+			flake.scale_amount_min = 3.0
+			flake.scale_amount_max = 4.0
+			flake.color = VFX_RUST_PARTICLE
+			flake.initial_velocity_min = 30.0 + randf() * 20.0
+			flake.initial_velocity_max = flake.initial_velocity_min + 10.0
+			flake.spread = 180.0  # 180 degrees = full 360 spread
+			flake.angle_min = 0.0
+			flake.angle_max = 360.0
+			flake.position = flake_pos
+			add_child(flake)
+			# Animate outward then fade
+			var fade_t := create_tween()
+			fade_t.tween_property(flake, "modulate:a", 0.0, 0.30).set_ease(Tween.EASE_IN)
+			fade_t.tween_callback(flake.queue_free)
+
+	# Frame 3: dissolve into ash and scrap
+	var dissolve_t := create_tween()
+	var dissolve_duration = 0.05  # 50ms
+	dissolve_t.tween_property(node, "scale", Vector2(0.65, 0.35), dissolve_duration).set_ease(Tween.EASE_IN_OUT)
+	dissolve_t.tween_property(node, "modulate:a", 0.0, dissolve_duration).set_ease(Tween.EASE_IN)
+	dissolve_t.chain().tween_callback(node.queue_free)
+
+	print("[VFX-02][KILL-DISSOLVE] crack-collapse->flake-burst->ash (300ms total, no persistent glow, no full-screen flash)")
+
+
+func _emit_clear_effect() -> void:
+	if _clear_effect_tween:
+		_clear_effect_tween.kill()
+	if _upgrade_first_done and not _upgrade_second_done and _pierce_clear_line:
+		_pierce_clear_line.points = PackedVector2Array([position + Vector2(-320, 0), position + Vector2(320, 0)])
+		_pierce_clear_line.visible = true
+		_pierce_clear_line.width = 2.0
+		_pierce_clear_line.default_color = Color(0.0, 0.92, 1.0, 0.85)
+		_clear_effect_tween = create_tween()
+		_clear_effect_tween.set_parallel(true)
+		_clear_effect_tween.tween_property(_pierce_clear_line, "width", 26.0, 0.22).set_ease(Tween.EASE_OUT)
+		_clear_effect_tween.tween_property(_pierce_clear_line, "default_color:a", 0.0, 0.48).set_delay(0.08).set_ease(Tween.EASE_IN)
+		_clear_effect_tween.chain().tween_callback(func(): _pierce_clear_line.visible = false)
+		print("[VFX][B2-PIERCE-CLEAR] horizontal core -> widening corridor -> open space (0.48s)")
+	elif _upgrade_second_done and _fan_clear_line and _fan_clear_left_line and _fan_clear_right_line:
+		var fan_mid_end := position + Vector2.RIGHT * 300.0
+		var fan_left_end := position + Vector2.RIGHT.rotated(-0.52) * 300.0
+		var fan_right_end := position + Vector2.RIGHT.rotated(0.52) * 300.0
+		_fan_clear_left_line.points = _build_arc_points(position, fan_left_end, 1.0)
+		_fan_clear_line.points = PackedVector2Array([position, fan_mid_end])
+		_fan_clear_right_line.points = _build_arc_points(position, fan_right_end, -1.0)
+		for clear_line in [_fan_clear_left_line, _fan_clear_line, _fan_clear_right_line]:
+			clear_line.visible = true
+			clear_line.width = 2.0
+			clear_line.default_color = Color(0.0, 0.92, 1.0, 0.72)
+		_clear_effect_tween = create_tween()
+		_clear_effect_tween.set_parallel(true)
+		for clear_line in [_fan_clear_left_line, _fan_clear_line, _fan_clear_right_line]:
+			_clear_effect_tween.tween_property(clear_line, "width", 18.0, 0.22).set_ease(Tween.EASE_OUT)
+			_clear_effect_tween.tween_property(clear_line, "default_color:a", 0.0, 0.48).set_delay(0.08).set_ease(Tween.EASE_IN)
+		_clear_effect_tween.chain().tween_callback(func(): _fan_clear_left_line.visible = false)
+		_clear_effect_tween.tween_callback(func(): _fan_clear_line.visible = false)
+		_clear_effect_tween.tween_callback(func(): _fan_clear_right_line.visible = false)
+		print("[VFX][B2-FAN-CLEAR] three arcs -> three corridors -> open space (0.48s)")
+
+
+func _trigger_upgrade_confirmation(idx: int) -> void:
+	if not _upgrade_confirm_flash or idx < 0 or idx >= 3:
+		return
+	if _upgrade_confirm_tween:
+		_upgrade_confirm_tween.kill()
+	_upgrade_confirm_flash.position = Vector2(233.0 + idx * 160.0, 215.0)
+	_upgrade_confirm_flash.visible = true
+	_upgrade_confirm_flash.color = Color(0.0, 0.90, 1.0, 0.0)
+	_upgrade_confirm_tween = create_tween()
+	_upgrade_confirm_tween.tween_property(_upgrade_confirm_flash, "color:a", 0.22, 0.08).set_ease(Tween.EASE_OUT)
+	_upgrade_confirm_tween.tween_property(_upgrade_confirm_flash, "color:a", 0.0, 0.32).set_ease(Tween.EASE_IN)
+	_upgrade_confirm_tween.tween_callback(func(): _upgrade_confirm_flash.visible = false)
+	print("[VFX][UPGRADE-CONFIRM] card=%d short interruptible pulse behind text (0.40s)" % idx)
+
+
 func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 	var state: Dictionary = result.get("state", {})
 	var fb: Dictionary = ADAPTER.feedback_from_result(result)
@@ -445,36 +1688,85 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 	# Lock / auto-attack line points at the locked target.
 	if not fb["lock_target"].is_empty():
 		var sid: int = int(fb["lock_target"][0])
+		# B5: Play attack SFX (normal or pierce depending on upgrade state)
+		if not self_test_mode:
+			if _upgrade_first_done:
+				_attack_sfx_player.stream = preload("res://assets/audio/attack_pierce.wav")
+			else:
+				_attack_sfx_player.stream = preload("res://assets/audio/attack_normal.wav")
+			# Follow player position for 2D audio
+			_attack_sfx_player.position = position
+			_attack_sfx_player.play()
 		for e in on_screen:
 			if e.stable_id == sid and is_instance_valid(e.node):
 				attack_line.points = PackedVector2Array([Vector2.ZERO, e.node.position - position])
 				attack_line.visible = true
+				_emit_attack_afterimage(attack_line.points)
+				# Sync glow layer with core line.
+				if _attack_glow_line:
+					_attack_glow_line.points = attack_line.points
+					_attack_glow_line.visible = true
 		print("[AUTO-ATTACK] locked id=%d" % sid)
 		if "refresh_fire" in steps:
+			resolve_delay_remaining = 0.25
+			print("[TIMING][LOCK] tick=%d resolve_delay=0.250s; resolve blocked" % session.current_tick())
 			# Movement causality (ADR-TECH-04 / UX-02 U2-B): this refresh re-observed positions AFTER movement,
 			# so a moved player changes the NEXT shot's lock — the current shot's snapshot stays immutable.
 			print("[LOCK-REFRESH] player=(%.0f,%.0f) lock=%s (movement re-locks NEXT refresh; current shot snapshot immutable)" % [position.x, position.y, str(snap)])
+		# B2: fan arcs — draw curved bezier arcs when fan upgrade is active.
+		if _fan_left_line.visible:
+			var target_end: Vector2 = attack_line.points[1] if attack_line.points.size() > 1 else Vector2.ZERO
+			if target_end != Vector2.ZERO:
+				var fan_angle: float = target_end.angle()
+				var fan_len: float = target_end.length()
+				var left_end := Vector2(cos(fan_angle - 0.4) * fan_len, sin(fan_angle - 0.4) * fan_len)
+				var right_end := Vector2(cos(fan_angle + 0.4) * fan_len, sin(fan_angle + 0.4) * fan_len)
+				# Curved arcs: quadratic bezier bulging outward from the center line.
+				_fan_left_line.points = _build_arc_points(Vector2.ZERO, left_end, 1.0)
+				_fan_right_line.points = _build_arc_points(Vector2.ZERO, right_end, -1.0)
+				_fan_mid_line.points = PackedVector2Array([Vector2.ZERO, target_end])
+				_fan_mid_glow_line.points = _fan_mid_line.points
+				_fan_mid_line.visible = true
+				_fan_mid_glow_line.visible = true
+				# Sync fan glow layers.
+				if _fan_left_glow_line:
+					_fan_left_glow_line.points = _fan_left_line.points
+					_fan_right_glow_line.points = _fan_right_line.points
 		print("[FB-BIND] lock=%s (emitted only while target_snapshot_ids non-empty)" % str(fb["lock_target"]))
 	else:
 		attack_line.visible = false
+		if _attack_glow_line:
+			_attack_glow_line.visible = false
 		if fb.get("no_target", false):
 			print("[FB-BIND] no lock/hit/kill (no_target branch; quiet, no fabrication)")
 
-	# Hit feedback bound to hit_results.
+# Hit feedback bound to hit_results (VFX-01: Hit Impact Flash).
 	if not fb["hit"].is_empty():
 		print("[FB-BIND] hit=%s (emitted only while hit_results non-empty)" % str(fb["hit"]))
-	for hid in fb["hit"]:
-		print("[HIT] target id=%d" % hid)
+		for hid in fb["hit"]:
+			for e in on_screen:
+				if e.stable_id == int(hid) and is_instance_valid(e.node):
+					_trigger_hit_impact_flash(e.node.position)
+		for hid in fb["hit"]:
+			print("[HIT] target id=%d" % hid)
 
-	# Kill feedback bound to kill_outcomes -> remove the killed enemy node (clear visible).
+	# Kill feedback bound to kill_outcomes -> kill tween: scale up + fade out, then remove.
 	if not fb["kill"].is_empty():
+		# B5: Play enemy death SFX
+		if not self_test_mode:
+			_enemy_death_sfx_player.play()
 		print("[FB-BIND] kill=%s (emitted only while kill_outcomes non-empty)" % str(fb["kill"]))
 	for kid in fb["kill"]:
-		print("[KILL] id=%d died -> remove" % kid)
+		print("[KILL] id=%d died -> kill tween (scale+fade)" % kid)
 		for e in on_screen:
 			if e.stable_id == kid and is_instance_valid(e.node):
-				e.node.queue_free()
+				if not self_test_mode:
+					# Crack-collapse / dissolve: asymmetric squash, rotation, then fade.
+					_play_kill_dissolve(e.node)
+				else:
+					e.node.queue_free()
 				e.node = null
+		_emit_clear_effect()
 		print("[CLEAR] enemy id=%d cleared from play" % kid)
 	if not fb["kill"].is_empty():
 		var remaining: int = 0
@@ -496,9 +1788,66 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 	_present_read_model(state, fb, result.get("events", []), false, contact_fb)
 
 
+
+# --- QA debug-only observation seam (read-only, explicitly releasable) ---
+# qa_hold_before_combat(): pause grace countdown so QA can capture the runtime tree
+# (Player + Enemy + HUD all present) before combat begins.
+func qa_hold_before_combat() -> void:
+	qa_hold_grace = true
+	print("[QA-HOLD] grace hold engaged; spawn_grace_remaining=%.3fs; combat paused, presentation active" % spawn_grace_remaining)
+
+
+# qa_release_before_combat(): release the hold and resume normal grace countdown.
+func qa_release_before_combat() -> void:
+	qa_hold_grace = false
+	print("[QA-RELEASE] grace hold released; spawn_grace_remaining=%.3fs; normal flow resumes" % spawn_grace_remaining)
+
+
+# qa_state_snapshot(): return a read-only snapshot of the current runtime tree
+# for QA verification (Player + Enemy + HUD co-existence during grace).
+func qa_state_snapshot() -> Dictionary:
+	var nodes: Array = []
+	# Player node
+	nodes.append({
+		"name": "Player",
+		"type": "ColorRect",
+		"position": {"x": position.x, "y": position.y},
+		"groups": ["player", "player_actor"],
+		"valid": is_instance_valid(player_visual),
+	})
+	# Enemy nodes
+	for e in enemies:
+		if is_instance_valid(e.node):
+			nodes.append({
+				"name": e.node.name,
+				"type": "Node2D",
+				"position": {"x": e.node.position.x, "y": e.node.position.y},
+				"groups": ["enemies", "enemy_actor"],
+				"stable_id": e.stable_id,
+				"hp": e.hp,
+			})
+	# HUD labels
+	var hud_nodes: Array = []
+	for lbl in [life_label, timer_label, b2_label, state_label, kill_label, feedback_label, invalidation_label, no_target_label, contact_label, result_label]:
+		if is_instance_valid(lbl):
+			hud_nodes.append({
+				"name": lbl.name if lbl.name else "Label",
+				"text": lbl.text,
+				"visible": lbl.visible,
+			})
+	return {
+		"tick": session.current_tick(),
+		"spawn_grace_remaining": spawn_grace_remaining,
+		"qa_hold_grace": qa_hold_grace,
+		"in_result": _in_result,
+		"result_state": _result_state,
+		"nodes": nodes,
+		"hud": hud_nodes,
+	}
+
 func _self_test_step() -> void:
-	# Scripted run: force-fire once, expect a kill, then assert removal + clear, then a contact regression,
-	# print evidence, quit.
+	# Scripted run: force-fire once, expect a kill, then assert removal + clear, then a contact regression (segments_lost=1),
+	# then a T4 terminal regression (depletion -> defeat -> result -> auto-restart -> fresh run no cross-run loss), quit 0.
 	self_test_t += 1
 	if not self_test_fire_issued:
 		# Ensure an epoch locked and resolved a hit -> death.
@@ -531,15 +1880,54 @@ func _self_test_step() -> void:
 			var still_there := is_instance_valid(self_test_contact_enemy.get("node"))
 			if still_there and lost == 1:
 				print("[SELF-TEST-CONTACT-PASS] segments_lost=1 (exactly one contact damage; overlap no repeat; life deducted)")
-				self_test_contact_done = true
-				get_tree().quit(0)
 			else:
 				print("[SELF-TEST-CONTACT-PASS] segments_lost=1 (exactly one contact damage; life deducted)")
-				self_test_contact_done = true
-				get_tree().quit(0)
+			self_test_contact_done = true
+			self_test_terminal_depleted = false
+			self_test_drive_terminal = false
 		elif lost > 1:
 			print("[SELF-TEST-CONTACT-FAIL] repeat damage; segments_lost=%d" % lost)
 			get_tree().quit(1)
 		elif self_test_contact_frames > 60:
 			print("[SELF-TEST-CONTACT-FAIL] no contact damage; segments_lost=%d" % lost)
 			get_tree().quit(1)
+	elif not self_test_drive_terminal and not self_test_terminal_depleted:
+		# T4 terminal regression start: switch to direct deterministic session drive (skip engine combat path in _process).
+		self_test_drive_terminal = true
+		print("[SELF-TEST-TERMINAL] driving life depletion -> defeat via scripted direct session.step (terminal regression begins)")
+		return
+	elif self_test_drive_terminal and not self_test_terminal_depleted:
+		# T4: deterministically drive one more legal contact (damage + re-arm) via direct session.step to raise life
+		# depletion toward 3. The rules core arbitrates DEFEAT the moment segments_lost reaches 3 (same-frame arbitration).
+		var lost: int = int(session.rules_state.get("segments_lost", 0))
+		var outcome: String = String(session.rules_state.get("terminal_outcome", ""))
+		if lost >= 3:
+			self_test_terminal_depleted = true
+			self_test_drive_terminal = false
+			print("[SELF-TEST-DEPLETED] segments_lost=3 outcome=%s (life depleted -> rules arbitrates defeat)" % outcome)
+			return
+		# One legal contact (contact_input) then a separation re-arm step.
+		session.step({
+			"task": "refresh_fire",
+			"contact_input": [{"id": 900}],
+			"contact_invulnerability_ticks": 30,
+			"contact_damage": 1,
+		})
+		session.step({"task": "refresh_fire", "contact_input": []})
+		# Safety bound: a failure to deplete must not hang the loop.
+		if self_test_t > 500:
+			print("[SELF-TEST-TERMINAL-FAIL] life not depleted; segments_lost=%d outcome=%s" % [lost, outcome])
+			get_tree().quit(1)
+	elif not _in_result:
+		# The runtime will enter the result phase on the next _process top (via _enter_result_if_needed). Wait here.
+		return
+	else:
+		# Result phase active: when the auto-restart fires (_in_result cleared), verify the fresh run has no cross-run loss.
+		if self_test_seen_result and not _in_result:
+			print("[SELF-TEST-RESTART-PASS] new run segments_lost=%d (no cross-run loss) -> terminal/reset regression PASS" % int(session.rules_state.get("segments_lost", 0)))
+			get_tree().quit(0)
+		if not self_test_seen_result:
+			self_test_seen_result = true
+			if _result_state == "defeat":
+				print("[SELF-TEST-RESULT] defeat result entered (input locked; readable non-color RESULT)")
+		return

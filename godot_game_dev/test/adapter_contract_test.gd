@@ -194,9 +194,9 @@ func test_movement_causality_next_refresh_relocks() -> void:
 		ADAPTER.candidate_from_observation(1, Vector2(60, 0), p1, Vector2(35, 0), 1, 1.0),
 		ADAPTER.candidate_from_observation(2, Vector2(10, 0), p1, Vector2(35, 0), 1, 1.0),
 	]
-	var resolve_after_move: Dictionary = RULES.step(
-		ADAPTER.make_envelope("resolve", [], ADAPTER.movement_from_input({"d": true}), 1),
-		r_p0["state"], 11)
+	var resolve_env: Dictionary = ADAPTER.make_envelope("resolve", [], ADAPTER.movement_from_input({"d": true}), 1)
+	resolve_env["attack_max_targets"] = 999
+	var resolve_after_move: Dictionary = RULES.step(resolve_env, r_p0["state"], 11)
 	# Resolution reads ONLY the immutable locked snapshot [2,1] (both locked ids hit), even though the player moved.
 	assert_array(resolve_after_move["state"]["target_snapshot_ids"]).is_equal([2, 1])
 	assert_bool(resolve_after_move["state"]["hit_results"].has(2)).is_true()
@@ -290,3 +290,50 @@ func test_contact_feedback_empty_when_no_contact_event() -> void:
 	assert_array(fb["damage"]).is_empty()
 	assert_bool(fb["invulnerable"]).is_false()
 	assert_array(fb["rearm"]).is_empty()
+
+# ============================ T4 terminal seam contract tests (this unit) ============================
+# Adapter terminal seam (NEXT_IMPL_UNIT_PLAN_v0_4 unit 4 / ADR-TECH-01 + ADR-TECH-05):
+#   - make_envelope carries the session terminal domain input (timer_completed) through the domain envelope;
+#   - terminal_feedback_from_result binds the RESULT presentation strictly to the terminal rule events
+#     (terminal_event / reset_event): no RESULT presentation is fabricated when no terminal event exists.
+# The adapter never decides victory/defeat — that stays in the rules core.
+
+# make_envelope carries the terminal_input (timer_completed) through the domain envelope (additive default empty).
+func test_make_envelope_carries_terminal_input() -> void:
+	var mov: Dictionary = ADAPTER.movement_from_input({"w": true})
+	var env: Dictionary = ADAPTER.make_envelope(
+		"refresh_fire", [{"stable_id": 1}], mov, 1, [], [], 30, 1, {"timer_completed": true})
+	assert_bool(env["terminal_input"].get("timer_completed", false)).is_true()
+	# Default (no terminal_input) carries an empty terminal_input for additive compatibility.
+	var env2: Dictionary = ADAPTER.make_envelope("refresh_fire", [{"stable_id": 1}], mov, 1)
+	assert_bool(env2["terminal_input"].is_empty()).is_true()
+
+
+# terminal_feedback_from_result is bound strictly to the terminal domain events.
+func test_terminal_feedback_bound_to_events() -> void:
+	var res: Dictionary = {
+		"state": {"result_locked": true},
+		"events": [
+			{"type": "terminal_event", "outcome": "defeat", "tick": 10},
+			{"type": "reset_event", "reset_epoch": 2, "tick": 12},
+		],
+	}
+	var fb: Dictionary = ADAPTER.terminal_feedback_from_result(res)
+	assert_bool(fb["terminal_fired"]).is_true()
+	assert_str(String(fb["outcome"])).is_equal("defeat")
+	assert_bool(fb["result_locked"]).is_true()
+	assert_bool(fb["reset_fired"]).is_true()
+	assert_int(int(fb["reset_epoch"])).is_equal(2)
+
+
+# No terminal/reset event -> no RESULT presentation (quiet; the empty/neutral path never fabricates victory/defeat).
+func test_terminal_feedback_empty_when_no_terminal_event() -> void:
+	var res: Dictionary = {
+		"state": {"result_locked": false},
+		"events": [{"type": "no_target_branch", "tick": 5}],
+	}
+	var fb: Dictionary = ADAPTER.terminal_feedback_from_result(res)
+	assert_bool(fb["terminal_fired"]).is_false()
+	assert_str(String(fb["outcome"])).is_equal("")
+	assert_bool(fb["reset_fired"]).is_false()
+	assert_int(int(fb["reset_epoch"])).is_equal(-1)

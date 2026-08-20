@@ -23,14 +23,32 @@
 #     no contact feedback is fabricated when no contact event exists.
 #   The adapter never decides contact legality, damage amount, or re-arm semantics — those live in the rules core.
 #
+# T4 terminal seam (this unit, T4 adapter/运行时 结局仲裁·呈现·立即重试; NEXT_IMPL_UNIT_PLAN_v0_4 unit 4):
+#   - `make_envelope` carries a `terminal_input` (session domain input: {timer_completed: bool} for the eight-minute
+#     completion) through the domain envelope so the rules core can arbitrate terminal same-frame with life depletion.
+#   - `terminal_feedback_from_result` translates the terminal DOMAIN outcomes (terminal_event / reset_event) into
+#     engine-facing RESULT presentation fields, bound strictly to those rule events:
+#       terminal_fired / outcome ("victory"|"defeat") only when a terminal_event fired this step;
+#       reset_fired / reset_epoch only when a reset_event fired.
+#   The adapter never decides victory/defeat — that is the rules core. It only translates the already-decided outcome.
+#
+# B4 upgrade seam (this unit, B4 adapter/运行时 B2升级; M1 B2):
+#   - `make_envelope` carries `task=="upgrade_select"` + `selected_card_id` through the domain envelope so the
+#     rules core can apply the upgrade effect.
+#   - `upgrade_feedback_from_result` translates the upgrade DOMAIN events (upgrade_event) into engine-facing
+#     upgrade feedback fields, bound strictly to the rule events:
+#       upgrade_fired / phase / selected_card_id / attack_max_targets / attack_fan_arcs.
+#   The adapter never decides upgrade effects — that is the rules core.
+#
 # Division of labour (honest seam):
 #   - "which target is locked / which target hit / whether it died / whether a contact was legal / how much life it
-#     costs / when it re-arms" are answered ONLY by the rules core (DshRulesCore.step -> target_snapshot_ids /
-#     hit_results / kill_outcomes / contact events / segments_lost). The adapter never invents these.
+#     costs / when it re-arms / whether the run reached victory/defeat" are answered ONLY by the rules core
+#     (DshRulesCore.step -> target_snapshot_ids / hit_results / kill_outcomes / contact events / segments_lost /
+#     terminal_outcome). The adapter never invents these.
 #   - The adapter only (1) maps raw input booleans into a domain input envelope, (2) maps engine entity observations
 #     into adapter-normalized candidates (stable_id + position-derived integer buckets + alive + hp), (3) maps engine
-#     overlap observations into contact observations, and (4) turns a rules step result into a small set of
-#     engine-facing feedback commands.
+#     overlap observations into contact observations, (4) carries the session's terminal domain input, and (5) turns a
+#     rules step result into a small set of engine-facing feedback commands.
 class_name DshAdapter
 extends RefCounted
 
@@ -109,6 +127,8 @@ static func pick_task(force_refresh: bool, locked_this_epoch: bool) -> String:
 # C4: `contact_input` (domain contact observations, may be empty so separation/re-arm is evaluated each step) and
 # contact parameter candidates (invulnerability ticks / damage) ride the same envelope. All values are candidate
 # defaults, never promoted rule constants.
+# T4: `terminal_input` (session domain input, default empty; {timer_completed: bool}) rides so the rules core can
+# arbitrate the eight-minute completion same-frame with life depletion.
 static func make_envelope(
 	task: String,
 	live_candidates: Array,
@@ -117,7 +137,10 @@ static func make_envelope(
 	removed_ids: Array = [],
 	contact_input: Array = [],
 	contact_invulnerability_ticks: int = 30,
-	contact_damage: int = 1
+	contact_damage: int = 1,
+	terminal_input: Dictionary = {},
+	selected_card_id: int = -1,
+	attack_max_targets: int = -1
 ) -> Dictionary:
 	var env: Dictionary = {
 		"task": task,
@@ -135,6 +158,14 @@ static func make_envelope(
 	}
 	if not removed_ids.is_empty():
 		env["removed_ids"] = removed_ids.duplicate(true)
+	# T4: session domain input for the terminal (timer completion); empty default keeps additive compatibility.
+	env["terminal_input"] = terminal_input.duplicate(true)
+	# B4: upgrade selection (task=="upgrade_select" + selected_card_id); additive, only carried when set.
+	if selected_card_id >= 0:
+		env["selected_card_id"] = selected_card_id
+	# B4: attack_max_targets envelope override for backward-compatible test fixtures (default -1 = use state value).
+	if attack_max_targets >= 0:
+		env["attack_max_targets"] = attack_max_targets
 	return env
 
 
@@ -193,4 +224,62 @@ static func contact_feedback_from_result(result: Dictionary) -> Dictionary:
 			feedback["invulnerable"] = true
 		elif etype == "contact_rearm_event":
 			feedback["rearm"].append(int(e.get("id", -1)))
+	return feedback
+
+
+# --- Pure route: terminal domain events -> RESULT presentation fields (T4) -----
+# Translates the terminal DOMAIN outcomes into engine-facing RESULT presentation, bound STRICTLY to the terminal
+# rule events:
+#   - "terminal_fired": true only when a terminal_event fired this step.
+#   - "outcome": "victory" | "defeat" — the already-decided terminal outcome (the adapter never decides victory/defeat).
+#   - "result_locked": state.result_locked (the result/input lock the presentation must respect while it shows the result).
+#   - "reset_fired": true only when a reset_event fired this step.
+#   - "reset_epoch": the new reset_epoch carried by the reset_event (or -1 if none).
+# No RESULT presentation is fabricated when no terminal/reset event exists (quiet discipline).
+static func terminal_feedback_from_result(result: Dictionary) -> Dictionary:
+	var events: Array = result.get("events", [])
+	var state: Dictionary = result.get("state", {})
+	var feedback: Dictionary = {
+		"terminal_fired": false,
+		"outcome": "",
+		"result_locked": bool(state.get("result_locked", false)),
+		"reset_fired": false,
+		"reset_epoch": -1,
+	}
+	for e in events:
+		var etype: String = e.get("type", "")
+		if etype == "terminal_event":
+			feedback["terminal_fired"] = true
+			feedback["outcome"] = String(e.get("outcome", ""))
+		elif etype == "reset_event":
+			feedback["reset_fired"] = true
+			feedback["reset_epoch"] = int(e.get("reset_epoch", -1))
+	return feedback
+
+
+# --- Pure route: upgrade domain events -> engine-facing upgrade feedback (B4) --
+# Translates the upgrade DOMAIN events into engine-facing upgrade feedback, bound STRICTLY to the upgrade rule events:
+#   - "upgrade_fired": true only when an upgrade_event fired this step.
+#   - "phase": "pierce" | "fan" — the phase that was applied.
+#   - "selected_card_id": the card id the player selected.
+#   - "attack_max_targets": the new attack_max_targets value after the upgrade.
+#   - "attack_fan_arcs": the new attack_fan_arcs value after the upgrade.
+# No upgrade feedback is fabricated when no upgrade event exists (quiet discipline).
+static func upgrade_feedback_from_result(result: Dictionary) -> Dictionary:
+	var events: Array = result.get("events", [])
+	var feedback: Dictionary = {
+		"upgrade_fired": false,
+		"phase": "",
+		"selected_card_id": -1,
+		"attack_max_targets": 1,
+		"attack_fan_arcs": 1,
+	}
+	for e in events:
+		var etype: String = e.get("type", "")
+		if etype == "upgrade_event":
+			feedback["upgrade_fired"] = true
+			feedback["phase"] = String(e.get("phase", ""))
+			feedback["selected_card_id"] = int(e.get("selected_card_id", -1))
+			feedback["attack_max_targets"] = int(e.get("attack_max_targets", 1))
+			feedback["attack_fan_arcs"] = int(e.get("attack_fan_arcs", 1))
 	return feedback
