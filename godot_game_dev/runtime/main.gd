@@ -1,4 +1,4 @@
-﻿# runtime/main.gd
+# runtime/main.gd
 # S4 minimal runtime scene controller, v0.2 (playable-slice polish, NEXT_IMPL_UNIT_PLAN_v0_2 candidate A)
 # + v0.3 (contact slice, NEXT_IMPL_UNIT_PLAN_v0_3 unit B: C2/C3/C4/C5).
 # + v0.4 (terminal/reset slice, NEXT_IMPL_UNIT_PLAN_v0_4 unit 4: T2/T3/T4/T5).
@@ -12,7 +12,7 @@
 #     session (session.step). It never invents target selection / ordering / hit legality / contact legality itself.
 #   - Feedback is applied strictly from DshAdapter.feedback_from_result so an empty shot never fabricates a lock or hit.
 #
-# R1 (this unit) 鈥?real input-driven movement (formalized):
+# R1 (this unit) — real input-driven movement (formalized):
 #   WASD + arrow keys (held-key polling) -> ADAPTER.movement_from_input -> carried as intent into the domain envelope
 #   (make_envelope) -> engine applies displacement to the player node. The rules core never reads movement values; the
 #   engine re-observes enemy positions AFTER the player has moved, so the NEXT pre-fire refresh re-locks a snapshot
@@ -23,7 +23,7 @@
 #   explicitly NOT player-playable input evidence (a [SELF-TEST] marker is printed at start; real keyboard input is
 #   observed by Independent QA through the runtime, not through this headless regression).
 #
-# R2 (this unit) 鈥?read-model full-field presentation (READ_MODEL_MINIMAL_FIELDS_v0_1 S5; ADR-TECH-02; UX-03 S1-S3):
+# R2 (this unit) — read-model full-field presentation (READ_MODEL_MINIMAL_FIELDS_v0_1 S5; ADR-TECH-02; UX-03 S1-S3):
 #   HUD minimal face       LIFE (three segments) / TIMER / B2 pre-fission structure placeholder.
 #   attack_state           four states idle/resolving/resolved/no_target derived ONLY from rules trace fields.
 #   kill_state             none -> killed, presented only while kill_outcomes is non-empty (settlement trace).
@@ -31,9 +31,9 @@
 #   invalidation section   invalidation_event(id,tick) surfaced as "no hit this shot".
 #   no-target quiet        no_target_branch => quiet form (no lock, no phantom hit); optional ONE-SHOT restrained
 #                          non-color cue bound to the branch (exact presentation form NOT frozen).
-#   hint field             explicitly NOT implemented (S5 搂4.4 exclusion).
+#   hint field             explicitly NOT implemented (S5 §4.4 exclusion).
 #
-# C4 (this unit) 鈥?adapter/杩愯鏃?contact 路 damage 路 separation 路 re-arm (NEXT_IMPL_UNIT_PLAN_v0_3 unit B):
+# C4 (this unit) — adapter/运行时 contact · damage · separation · re-arm (NEXT_IMPL_UNIT_PLAN_v0_3 unit B):
 #   - Engine-side overlap detection (ADR-TECH-01 seam): AABB overlap between the player rect and each live enemy rect
 #     is computed HERE (engine geometry), then translated by the adapter (ADAPTER.contact_observations) into the
 #     domain contact input the rules core consumes.
@@ -42,23 +42,23 @@
 #     distance away from the contacting victim so the pair separates and re-arm can occur.
 #   - self-test gains a deterministic contact regression phase.
 #
-# C5 (this unit) 鈥?life deduction read-model presentation:
+# C5 (this unit) — life deduction read-model presentation:
 #   LIFE line reflects the REAL deductions: three segments, `[x]` = lost / `[o]` = alive, segments_lost read from
 #   the rules trace (non-color, text/shape only; UX-13). A contact read-model line is bound to the contact events.
 #
-# T4 + T5 (this unit) 鈥?runtime terminal arbitration -> RESULT presentation -> automatic immediate retry
-#   (NEXT_IMPL_UNIT_PLAN_v0_4 unit 4; ADR-TECH-05 搂8; decision #5/#11/#12):
+# T4 + T5 (this unit) — runtime terminal arbitration -> RESULT presentation -> automatic immediate retry
+#   (NEXT_IMPL_UNIT_PLAN_v0_4 unit 4; ADR-TECH-05 §8; decision #5/#11/#12):
 #   - The rules core arbitrates the terminal outcome (victory=control completion / defeat=life depletion, life-depletion-
 #     same-frame-priority) from `terminal_input.timer_completed` + its own `segments_lost`. This runtime only sends the
 #     session domain input (timer_completed when the candidate run_duration_ticks is reached) and OBSERVES the outcome.
 #   - While a terminal result is active (rules result_locked), gameplay input is DISABLED (movement + attack are not
-#     read; result/input lock, ADR-TECH-05 / Systems 搂4 step 5), and the RESULT is presented readable and non-color
+#     read; result/input lock, ADR-TECH-05 / Systems §4 step 5), and the RESULT is presented readable and non-color
 #     (UX-13) in an HUD region that does not occlude player/danger/space (UX-09):
 #         "RESULT: victory (clear)"          (decision #11, control completion)
 #         "RESULT: defeat (light interruption)" (decision #12, non-punitive)
 #   - After the short candidate result duration (terminal_result_duration), the runtime triggers the canonical
-#     automatic reset (session.reset(): run identity advances, RNG reseeded, clean rules state 鈥?no out-of-run loss)
-#     and re-spawns fresh placeholder enemies for the new run (immediate retry, no out-of-run loss; Systems 搂3 reset /
+#     automatic reset (session.reset(): run identity advances, RNG reseeded, clean rules state — no out-of-run loss)
+#     and re-spawns fresh placeholder enemies for the new run (immediate retry, no out-of-run loss; Systems §3 reset /
 #     UX matrix Restart).
 #   - RNG/session/run-id reset remains session-owned mechanical handling (ADR-TECH-01/05); this node only calls
 #     session.reset() for the restart transaction. presentation consumes only the read-model / rules trace.
@@ -68,6 +68,17 @@ extends Node2D
 
 const ADAPTER = preload("res://adapter/adapter.gd")
 const SESSION = preload("res://rules/session.gd")
+
+# Phase A observation fix: per-frame / per-shot high-frequency logs are gated behind DEBUG_VERBOSE (default false).
+# Lifecycle / terminal / upgrade / contact / self-test logs stay always-on.
+const DEBUG_VERBOSE := false
+const DEBUG_HUD := false
+
+
+# Debug-verbose log sink (keeps runtime output free of per-frame flood; set DEBUG_VERBOSE=true to re-enable).
+func dbg_verbose(message: String) -> void:
+	if DEBUG_VERBOSE:
+		print(message)
 
 @export var move_speed: float = 160.0
 @export var attack_interval: float = 0.6
@@ -90,10 +101,13 @@ var qa_hold_grace: bool = false
 
 # Node handles built at runtime (placeholder presentation).
 var player_visual: ColorRect
+var _player_sprite_node: Sprite2D    # animation handle (bob + facing flip)
+var _anim_time: float = 0.0
 var attack_line: Line2D
 var life_label: Label
 var timer_label: Label
 var b2_label: Label
+var objective_label: Label
 var state_label: Label
 var kill_label: Label
 var feedback_label: Label
@@ -113,6 +127,7 @@ var _attack_sfx_player: AudioStreamPlayer2D
 var _enemy_death_sfx_player: AudioStreamPlayer
 var _upgrade_sfx_player: AudioStreamPlayer
 var _card_confirm_sfx_player: AudioStreamPlayer
+var _jingle_player: AudioStreamPlayer
 
 # Texture resources for player animation
 var _player_idle_texture: Texture2D
@@ -195,24 +210,37 @@ func _ready() -> void:
 	_self_test_mode_detect()
 
 	# Load texture resources for player animation
-	_player_idle_texture = preload("res://assets/player_idle_raw.png")
-	_player_attack_texture = preload("res://assets/player_attack_raw.png")
+	_player_idle_texture = preload("res://assets/player_idle_48.png")
+	_player_attack_texture = preload("res://assets/player_attack_48.png")
 
 	# Initialize audio players
+	# BGM: dedicated Music bus with a low-pass filter — the raw industrial ambience is harsh at
+	# full bandwidth (user-reported ear fatigue 2026-08-20); keep ambience, cut piercing highs.
 	_bgm_player = AudioStreamPlayer.new()
 	_bgm_player.stream = preload("res://assets/audio/bg_industrial_ambient.wav")
-	_bgm_player.volume_db = -8.0
-	_bgm_player.playing = true
+	_bgm_player.volume_db = -14.0
+	var _music_bus_idx: int = AudioServer.bus_count
+	AudioServer.add_bus(_music_bus_idx)
+	AudioServer.set_bus_name(_music_bus_idx, "Music")
+	var _lp: AudioEffectLowPassFilter = AudioEffectLowPassFilter.new()
+	_lp.cutoff_hz = 2400.0
+	_lp.resonance = 0.4
+	AudioServer.add_bus_effect(_music_bus_idx, _lp)
+	_bgm_player.bus = "Music"
 	add_child(_bgm_player)
+	_bgm_player.playing = true
 
 	_attack_sfx_player = AudioStreamPlayer2D.new()
 	_attack_sfx_player.stream = preload("res://assets/audio/attack_normal.wav")
-	_attack_sfx_player.volume_db = -6.0
+	# Attack SFX at background level (-24dB) with the verified soft air-swish tone:
+	# audible feedback without reading as a drum loop at ~0.7 shots/sec.
+	_attack_sfx_player.volume_db = -24.0
 	add_child(_attack_sfx_player)
 
 	_enemy_death_sfx_player = AudioStreamPlayer.new()
 	_enemy_death_sfx_player.stream = preload("res://assets/audio/enemy_death.wav")
-	_enemy_death_sfx_player.volume_db = -3.0
+	# Kill SFX at -21dB: subordinate to upgrade sounds, above the near-inaudible attack snap.
+	_enemy_death_sfx_player.volume_db = -21.0
 	add_child(_enemy_death_sfx_player)
 
 	_upgrade_sfx_player = AudioStreamPlayer.new()
@@ -224,6 +252,11 @@ func _ready() -> void:
 	_card_confirm_sfx_player.stream = preload("res://assets/audio/card_confirm.wav")
 	_card_confirm_sfx_player.volume_db = -4.0
 	add_child(_card_confirm_sfx_player)
+
+	# Win/lose jingle player (reward-audio layer 2026-08-21).
+	_jingle_player = AudioStreamPlayer.new()
+	_jingle_player.volume_db = -8.0
+	add_child(_jingle_player)
 
 	_build_visuals(self_test_mode)
 	spawn_grace_remaining = 1.0
@@ -239,6 +272,7 @@ func _ready() -> void:
 	_hit_flash_particles.name = "HitImpactParticles"
 	# Godot 4.7.1: CPUParticles2D emits in all directions by default
 	_hit_flash_particles.lifetime = 0.30  # 300ms total, fades out
+	_hit_flash_particles.amount = 5   # keep impact readable without a particle burst spike
 	_hit_flash_particles.one_shot = true
 	_hit_flash_particles.gravity = Vector2(0, 0)
 	_hit_flash_particles.emitting = false
@@ -255,7 +289,7 @@ func _ready() -> void:
 	_hit_flash_particles.spread = 180.0  # 180 degrees = full 360 spread
 	_hit_flash_particles.angle_min = 0.0
 	_hit_flash_particles.angle_max = 360.0
-	add_child(_hit_flash_particles)
+	world_root.add_child(_hit_flash_particles)
 
 
 func _self_test_mode_detect() -> void:
@@ -268,6 +302,53 @@ func _self_test_mode_detect() -> void:
 			self_test_mode = true
 
 
+# Fixed world layer: the root Main node IS the player and moves with input, so all
+# world-space content (arena, enemies, world VFX) must live under world_root, which is
+# counter-offset every frame to stay stationary in world space.
+var world_root: Node2D
+
+# --- Iteration 2: fixed-step tick + chase AI + wave pressure ---
+const TICK_HZ: float = 60.0                     # fixed session tick rate; run_duration 4800 ticks = 80s regardless of FPS
+var _tick_accumulator: float = 0.0
+const WAVE_INTERVAL: float = 3.5                # seconds between waves (after grace)
+const MAX_LIVE_ENEMIES: int = 22                # pressure/readability/perf cap
+const WALKER_SPEED: float = 62.0                # fast, fragile
+const BRUTE_SPEED: float = 34.0                 # slow, tanky (hp 3)
+const ATTACK_RANGE: float = 280.0               # engine observation boundary: enemies beyond this are not targetable
+const ENEMY_TINT: Color = Color(0.9, 0.35, 0.2)
+const WORLD_SIZE: Vector2 = Vector2(2304.0, 1296.0)   # 2x2 viewport scrolling arena (survivors-style)
+const SPAWN_RING_RADIUS: float = 760.0               # enemies spawn just outside the camera view around the player
+var _wave_timer: float = 0.0
+var _wave_index: int = 0
+var _perf_probe_timer: float = 0.0
+var _sfx_muted: bool = false   # M-key toggle: player-owned SFX escape hatch
+var _kill_streak: int = 0
+var _last_kill_time: float = -10.0
+var _last_kill_sfx_time: float = -10.0
+
+const SFX_BASE_VOLUMES: Dictionary = {"attack": -24.0, "kill": -21.0, "upgrade": -4.0, "card": -4.0}
+
+
+func _toggle_sfx_mute() -> void:
+	_sfx_muted = not _sfx_muted
+	if _attack_sfx_player:
+		_attack_sfx_player.volume_db = -60.0 if _sfx_muted else SFX_BASE_VOLUMES["attack"]
+	if _enemy_death_sfx_player:
+		_enemy_death_sfx_player.volume_db = -60.0 if _sfx_muted else SFX_BASE_VOLUMES["kill"]
+	if _upgrade_sfx_player:
+		_upgrade_sfx_player.volume_db = -60.0 if _sfx_muted else SFX_BASE_VOLUMES["upgrade"]
+	if _card_confirm_sfx_player:
+		_card_confirm_sfx_player.volume_db = -60.0 if _sfx_muted else SFX_BASE_VOLUMES["card"]
+	if _jingle_player:
+		_jingle_player.volume_db = -60.0 if _sfx_muted else -8.0
+	print("[AUDIO] SFX %s (M toggles)" % ("muted" if _sfx_muted else "unmuted"))
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_M:
+		_toggle_sfx_mute()
+
+
 func _new_enemy_node(pos: Vector2, hp: int, color: Color, enemy_type: String = "walker") -> Node2D:
 	var e := Node2D.new(); e.name = "Enemy_%d" % next_stable_id; e.add_to_group("enemies"); e.add_to_group("enemy_actor")
 	e.position = pos
@@ -275,29 +356,53 @@ func _new_enemy_node(pos: Vector2, hp: int, color: Color, enemy_type: String = "
 	var sprite := Sprite2D.new()
 	sprite.name = "EnemySprite"
 	if enemy_type == "brute":
-		sprite.texture = preload("res://assets/enemy_brute_raw.png")
+		sprite.texture = preload("res://assets/enemy_brute_64.png")
 	else:
-		sprite.texture = preload("res://assets/enemy_walker_raw.png")
-	# Scale to ~26x26 px in-game (1024 -> 26 = 0.0254)
-	sprite.scale = Vector2(0.0254, 0.0254)
+		sprite.texture = preload("res://assets/enemy_walker_48.png")
+	# Pre-scaled textures (48/64px) shown at native size — the raw 1024px textures
+	# minified to ~46px collapsed fps to ~20 with 20+ enemies (2026-08-20 perf bug).
+	var sprite_scale := 1.3 if enemy_type == "brute" else 1.0
+	sprite.scale = Vector2(sprite_scale, sprite_scale)
+	# Apply the enemy tint so the raw texture reads against the dark arena (was unused, enemies were grey-on-grey)
+	sprite.modulate = color
 	e.add_child(sprite)
-	add_child(e)
-	enemies.append({"node": e, "stable_id": next_stable_id, "hp": hp, "hit_flash": 0.0, "visual": sprite})
+	world_root.add_child(e)
+	enemies.append({"node": e, "stable_id": next_stable_id, "hp": hp, "hit_flash": 0.0, "visual": sprite,
+		"type": enemy_type, "speed": BRUTE_SPEED if enemy_type == "brute" else WALKER_SPEED})
 	next_stable_id += 1
 	return e
 
 
 func _build_visuals(for_self_test: bool) -> void:
+	# World layer first: everything world-space is parented here, not to the moving player root.
+	world_root = Node2D.new()
+	world_root.name = "WorldRoot"
+	add_child(world_root)
 	# B5: Arena background - full viewport, behind all game elements
 	arena_bg = Sprite2D.new()
 	arena_bg.name = "ArenaBackground"
 	# Load the arena background texture via the imported resource
 	var bg_texture: Texture2D = preload("res://assets/arena_bg.png")
 	arena_bg.texture = bg_texture
-	arena_bg.position = Vector2(640, 360)
-	# Scale to fit viewport (1920x1088 -> 640x360 = 1/3 scale)
-	arena_bg.scale = Vector2(0.333, 0.333)
-	add_child(arena_bg)
+	# Cover the full scrolling world (not just the viewport) — the camera pans across it.
+	var cover_scale: float = float(max(WORLD_SIZE.x / bg_texture.get_width(), WORLD_SIZE.y / bg_texture.get_height()))
+	arena_bg.scale = Vector2(cover_scale, cover_scale)
+	arena_bg.position = WORLD_SIZE * 0.5
+	world_root.add_child(arena_bg)
+
+	# Survivors-style camera: child of Main (= the player) so it follows automatically,
+	# clamped to the world rect, with light smoothing.
+	var cam := Camera2D.new()
+	cam.name = "PlayerCamera"
+	cam.position = Vector2.ZERO
+	cam.limit_left = 0
+	cam.limit_top = 0
+	cam.limit_right = int(WORLD_SIZE.x)
+	cam.limit_bottom = int(WORLD_SIZE.y)
+	cam.position_smoothing_enabled = false   # direct-control feel: camera locked to player (smoothing lag read as unresponsive input)
+	cam.position_smoothing_speed = 8.0
+	add_child(cam)
+	cam.make_current()
 
 	# Player setup - Sprite2D with attack texture
 	var player_sprite := Sprite2D.new()
@@ -305,8 +410,9 @@ func _build_visuals(for_self_test: bool) -> void:
 	player_sprite.texture = _player_idle_texture
 	player_sprite.position = Vector2.ZERO
 	# Scale to ~24x24 px in-game (1024 -> 24 = 0.0234)
-	player_sprite.scale = Vector2(0.0234, 0.0234)
+	player_sprite.scale = Vector2.ONE   # pre-scaled 48px texture; keep native display size
 	add_child(player_sprite)
+	_player_sprite_node = player_sprite
 
 	player_visual = ColorRect.new(); player_visual.name = "Player"; player_visual.add_to_group("player"); player_visual.add_to_group("player_actor")
 	player_visual.color = Color(0.2, 0.7, 1.0)   # cyan signal (restrained, non-color-distinguishable by shape too)
@@ -314,7 +420,7 @@ func _build_visuals(for_self_test: bool) -> void:
 	player_visual.position = -player_visual.size / 2.0
 	player_visual.visible = false  # Hidden, replaced by sprite
 	add_child(player_visual)
-	position = Vector2(320, 360)
+	position = WORLD_SIZE * 0.5   # start centered in the scrolling arena
 
 	# Attack line: thin bright core + wide tapered glow for penetration visual weight.
 	# Glow layer renders behind the core line.
@@ -345,63 +451,76 @@ func _build_visuals(for_self_test: bool) -> void:
 	hud.layer = 10
 	add_child(hud)
 
-	# --- R2 HUD minimal face (S5 搂4.1 life/timer/b2) + read-model presentation lines. ---
+	# --- R2 HUD minimal face (S5 §4.1 life/timer/b2) + read-model presentation lines. ---
 	life_label = Label.new()
 	life_label.position = Vector2(16, 12)
-	life_label.text = "LIFE [o][o][o]  segments_lost=0"
+	life_label.text = "生命  [o][o][o]"
 	hud.add_child(life_label)
 
 	timer_label = Label.new()
 	timer_label.position = Vector2(16, 30)
-	timer_label.text = "TIMER tick=0  run_bound=8min(opaque)"
+	timer_label.text = "时间  00:00"
 	hud.add_child(timer_label)
 
 	b2_label = Label.new()
 	b2_label.position = Vector2(16, 48)
-	b2_label.text = "B2 pre-fission (structure placeholder)"
+	b2_label.text = "等级 1   经验 --"
 	hud.add_child(b2_label)
 
+	objective_label = Label.new()
+	objective_label.position = Vector2(16, 66)
+	objective_label.text = "目标  WASD / 方向键移动，自动攻击"
+	objective_label.add_theme_color_override("font_color", Color(0.86, 0.86, 0.82))
+	hud.add_child(objective_label)
+
 	state_label = Label.new()
-	state_label.position = Vector2(16, 66)
+	state_label.position = Vector2(16, 84)
 	state_label.text = "attack: idle"
 	state_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
+	state_label.visible = DEBUG_HUD
 	hud.add_child(state_label)
 
 	kill_label = Label.new()
-	kill_label.position = Vector2(16, 84)
+	kill_label.position = Vector2(16, 102)
 	kill_label.text = "kill: none"
+	kill_label.visible = DEBUG_HUD
 	hud.add_child(kill_label)
 
 	feedback_label = Label.new()
-	feedback_label.position = Vector2(16, 102)
+	feedback_label.position = Vector2(16, 120)
 	feedback_label.text = "feedback: - (quiet)"
 	feedback_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	feedback_label.visible = DEBUG_HUD
 	hud.add_child(feedback_label)
 
 	invalidation_label = Label.new()
-	invalidation_label.position = Vector2(16, 120)
+	invalidation_label.position = Vector2(16, 138)
 	invalidation_label.text = ""
 	invalidation_label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
+	invalidation_label.visible = DEBUG_HUD
 	hud.add_child(invalidation_label)
 
 	no_target_label = Label.new()
-	no_target_label.position = Vector2(16, 138)
+	no_target_label.position = Vector2(16, 156)
 	no_target_label.text = ""
 	no_target_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	no_target_label.visible = DEBUG_HUD
 	hud.add_child(no_target_label)
 
 	# C5 contact read-model line (bound to the rules contact events; non-color text).
 	contact_label = Label.new()
-	contact_label.position = Vector2(16, 156)
+	contact_label.position = Vector2(16, 174)
 	contact_label.text = "contact: none"
 	contact_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	contact_label.visible = DEBUG_HUD
 	hud.add_child(contact_label)
 
 	# T5 RESULT presentation line (readable, non-color text UX-13; HUD region, not over player/danger/space UX-09).
 	result_label = Label.new()
-	result_label.position = Vector2(16, 174)
+	result_label.position = Vector2(16, 192)
 	result_label.text = ""
 	result_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	result_label.visible = DEBUG_HUD
 	hud.add_child(result_label)
 
 	# B2 upgrade card interface (UX spec v0.1: horizontal cards on separate canvas layer).
@@ -494,22 +613,22 @@ func _build_visuals(for_self_test: bool) -> void:
 	_pierce_clear_line.width = 2.0
 	_pierce_clear_line.default_color = Color(0.0, 0.90, 1.0, 0.0)
 	_pierce_clear_line.visible = false
-	add_child(_pierce_clear_line)
+	world_root.add_child(_pierce_clear_line)
 	_fan_clear_line = Line2D.new()
 	_fan_clear_line.width = 2.0
 	_fan_clear_line.default_color = Color(0.0, 0.90, 1.0, 0.0)
 	_fan_clear_line.visible = false
-	add_child(_fan_clear_line)
+	world_root.add_child(_fan_clear_line)
 	_fan_clear_left_line = Line2D.new()
 	_fan_clear_left_line.width = 2.0
 	_fan_clear_left_line.default_color = Color(0.0, 0.90, 1.0, 0.0)
 	_fan_clear_left_line.visible = false
-	add_child(_fan_clear_left_line)
+	world_root.add_child(_fan_clear_left_line)
 	_fan_clear_right_line = Line2D.new()
 	_fan_clear_right_line.width = 2.0
 	_fan_clear_right_line.default_color = Color(0.0, 0.90, 1.0, 0.0)
 	_fan_clear_right_line.visible = false
-	add_child(_fan_clear_right_line)
+	world_root.add_child(_fan_clear_right_line)
 	_upgrade_confirm_flash = ColorRect.new()
 	_upgrade_confirm_flash.size = Vector2(174, 110)
 	_upgrade_confirm_flash.position = Vector2(233, 215)
@@ -519,9 +638,9 @@ func _build_visuals(for_self_test: bool) -> void:
 	_card_hud.add_child(_upgrade_confirm_flash)
 
 	if not for_self_test:
-		# Two placeholder enemies so there is a live candidate set to target.
-		_new_enemy_node(Vector2(560, 200), 1, Color(0.9, 0.35, 0.2))
-		_new_enemy_node(Vector2(620, 420), 1, Color(0.9, 0.35, 0.2))
+		# Iteration 2: no static targets — waves spawn from the arena edges shortly after grace (see _update_waves).
+		_wave_timer = WAVE_INTERVAL - 2.0   # first wave ~2s after grace ends
+		_wave_index = 0
 
 
 func _self_test_add_enemies() -> void:
@@ -580,7 +699,7 @@ func _apply_light_separation(victim_id: int, on_screen: Array) -> void:
 		away = Vector2(0, -1)   # degenerate identical position -> deterministic upward nudge
 	away = away.normalized()
 	position += away * contact_separate_dist
-	print("[CONTACT-SEPARATE] victim_id=%d player=(%.0f,%.0f) (light separation; candidate mag %.0f)" % [victim_id, position.x, position.y, contact_separate_dist])
+	dbg_verbose("[CONTACT-SEPARATE] victim_id=%d player=(%.0f,%.0f) (light separation; candidate mag %.0f)" % [victim_id, position.x, position.y, contact_separate_dist])
 
 
 # --- T4: terminal result phase handling ---
@@ -590,13 +709,13 @@ func _apply_light_separation(victim_id: int, on_screen: Array) -> void:
 func _handle_result_phase(delta: float) -> void:
 	if result_label:
 		if _result_state == "defeat":
-			result_label.text = "RESULT: defeat (light interruption)"
+			result_label.text = "RESULT: 失败 —— 生命耗尽（任意键立即重试）"
 		elif _result_state == "victory":
-			result_label.text = "RESULT: victory (clear)"
+			result_label.text = "RESULT: 胜利 —— 成功存活！"
 		else:
 			result_label.text = "RESULT: ..."
 	# Result/input lock: suppress gameplay presentation detail during the terminal result (presentation reads only the
-	# locked result 鈥?no re-arbitration, no new combat state), then count down to the automatic immediate retry.
+	# locked result — no re-arbitration, no new combat state), then count down to the automatic immediate retry.
 	_result_remaining -= delta
 	if _result_remaining <= 0.0:
 		_auto_restart()
@@ -605,7 +724,7 @@ func _handle_result_phase(delta: float) -> void:
 # --- T4: canonical automatic immediate reset (immediate retry, no out-of-run loss) ---
 # session.reset() is the session-owned canonical clean-restart transaction (ADR-TECH-01/05): run identity advances,
 # the single RNG is reseeded, and the rules state is rebuilt fresh (segments_lost=0, terminal cleared, snapshots/results
-# cleared) 鈥?so a new run carries NO cross-run loss. This node re-spawns fresh placeholder enemies for the new run.
+# cleared) — so a new run carries NO cross-run loss. This node re-spawns fresh placeholder enemies for the new run.
 func _auto_restart() -> void:
 	session.reset()
 	for e in enemies:
@@ -613,11 +732,11 @@ func _auto_restart() -> void:
 			e.node.queue_free()
 	enemies.clear()
 	next_stable_id = 1
-	# Fresh placeholder enemies for the new run (normal mode only; self-test re-arms its own deterministic layout).
-	if not self_test_mode:
-		_new_enemy_node(Vector2(560, 200), 1, Color(0.9, 0.35, 0.2))
-		_new_enemy_node(Vector2(620, 420), 1, Color(0.9, 0.35, 0.2))
-	position = Vector2(320, 360)
+	# Iteration 2: waves replace static placeholder enemies on restart; first wave ~2s after grace.
+	_wave_timer = WAVE_INTERVAL - 2.0
+	_wave_index = 0
+	_tick_accumulator = 0.0
+	position = WORLD_SIZE * 0.5   # start centered in the scrolling arena
 	attack_line.visible = false
 	locked_this_epoch = false
 	last_fire_time = 0.0
@@ -639,6 +758,15 @@ func _auto_restart() -> void:
 	attack_line.default_color = _attack_base_color
 	_fan_left_line.visible = false
 	_fan_right_line.visible = false
+	# VFX visibility reset omissions fixed 2026-08-20 (cross-run visual residue): mid fan, afterimage, pierce clear.
+	if _fan_mid_line:
+		_fan_mid_line.visible = false
+	if _fan_mid_glow_line:
+		_fan_mid_glow_line.visible = false
+	if _attack_afterimage_line:
+		_attack_afterimage_line.visible = false
+	if _pierce_clear_line:
+		_pierce_clear_line.visible = false
 	# Reset glow layers.
 	if _attack_glow_line:
 		_attack_glow_line.visible = false
@@ -678,6 +806,11 @@ func _enter_result_if_needed() -> void:
 		_in_result = true
 		_result_state = outcome
 		_result_remaining = terminal_result_duration if terminal_result_duration > 0.0 else 0.15
+		# Win/lose jingle (2026-08-21 reward-audio layer): the outcome moment gets the
+		# brightest, most satisfying sound in the game.
+		if _jingle_player:
+			_jingle_player.stream = preload("res://assets/audio/defeat.wav") if outcome == "defeat" else preload("res://assets/audio/victory.wav")
+			_jingle_player.play()
 		if _result_state == "defeat":
 			print("[TERMINAL] outcome=defeat (life depletion; short light-interruption result)")
 		elif _result_state == "victory":
@@ -764,7 +897,7 @@ func _update_card_visuals() -> void:
 		return
 	for i in range(3):
 		var card: Dictionary = _card_nodes[i]
-		var bg: ColorRect = card.bg
+		var bg: TextureRect = card.bg
 		if not is_instance_valid(bg):
 			continue
 		var kw: Label = card.keyword
@@ -800,7 +933,7 @@ func _update_card_visuals() -> void:
 
 var _card_hovered_idx: int = -1
 
-func _apply_card_style(bg: ColorRect, kw: Label, diff: Label, eff: Label, idx: int, state_name: String) -> void:
+func _apply_card_style(bg: TextureRect, kw: Label, diff: Label, eff: Label, idx: int, state_name: String) -> void:
 	var style: StyleBoxFlat = bg.get_theme_stylebox("panel", "ColorRect")
 	if style == null:
 		style = StyleBoxFlat.new()
@@ -896,7 +1029,7 @@ func _animate_cards_in() -> void:
 		bt.tween_property(backdrop, "color", Color(0.0, 0.0, 0.0, 0.25), 0.2).set_ease(Tween.EASE_OUT)
 	for i in range(3):
 		var card: Dictionary = _card_nodes[i]
-		var bg: ColorRect = card.bg
+		var bg: TextureRect = card.bg
 		if not is_instance_valid(bg):
 			continue
 		bg.visible = true
@@ -922,7 +1055,7 @@ func _animate_cards_out() -> void:
 		bt.tween_callback(func(): backdrop.visible = false)
 	for i in range(3):
 		var card: Dictionary = _card_nodes[i]
-		var bg: ColorRect = card.bg
+		var bg: TextureRect = card.bg
 		if not is_instance_valid(bg):
 			continue
 		var t := create_tween()
@@ -1196,7 +1329,30 @@ func _build_arc_points(start: Vector2, end: Vector2, offset_sign: float, num_poi
 
 
 func _process(delta: float) -> void:
-	session.advance_tick()   # deterministic session tick drives the TIMER read-model field (S5 搂4.1)
+	var _t0: int = Time.get_ticks_usec()   # perf probe: frame script time
+	# Fixed-step session tick (60Hz): tick-based timing (run duration, upgrade windows) stays
+	# frame-rate independent. Was per-frame advance_tick, which made 4800 ticks last ~33s at 144Hz.
+	_tick_accumulator += delta
+	var _tick_step: float = 1.0 / TICK_HZ
+	while _tick_accumulator >= _tick_step:
+		session.advance_tick()
+		_tick_accumulator -= _tick_step
+
+	# Keep the world layer stationary: Main is the player and moves, so counter its offset.
+	if world_root:
+		world_root.position = -position
+
+	# Perf probe: node-count heartbeat every 5s (leaks show as steady growth).
+	_perf_probe_timer += delta
+	if _perf_probe_timer >= 5.0:
+		_perf_probe_timer = 0.0
+		var dc: int = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
+		var objs: int = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME)
+		var alive: int = 0
+		for e in enemies:
+			if is_instance_valid(e.node):
+				alive += 1
+		print("[PERF] nodes=%d alive=%d dict=%d fps=%.0f draw_calls=%d rs_obj=%d script_ms=%.2f" % [get_tree().get_node_count(), alive, enemies.size(), Engine.get_frames_per_second(), dc, objs, (Time.get_ticks_usec()-_t0)/1000.0])
 
 	# Hit flash timer: brief white flash on attack line when a hit registers (50ms visual feedback).
 	if _hit_flash_remaining > 0.0:
@@ -1206,7 +1362,7 @@ func _process(delta: float) -> void:
 			if _attack_glow_line:
 				_attack_glow_line.default_color = _attack_glow_base_color
 
-	# B2: upgrade window handling 鈥?pauses combat, shows card selection, waits for player input.
+	# B2: upgrade window handling — pauses combat, shows card selection, waits for player input.
 	if _upgrade_pending:
 		_handle_upgrade_phase(delta)
 		if self_test_mode:
@@ -1217,7 +1373,7 @@ func _process(delta: float) -> void:
 	if not _in_result:
 		_check_upgrade_windows()
 
-	# T4: terminal result handling 鈥?while a result is active, gameplay input is disabled (result/input lock) and the
+	# T4: terminal result handling — while a result is active, gameplay input is disabled (result/input lock) and the
 	# short result is presented before the automatic immediate retry.
 	if _in_result:
 		_handle_result_phase(delta)
@@ -1245,11 +1401,22 @@ func _process(delta: float) -> void:
 		position += Vector2(0, 0)
 	else:
 		position += Vector2(float(movement["dir_x"]), float(movement["dir_y"])) * move_speed * delta
+		# Arena bounds: keep the player inside the big scrolling world (walls at world edges).
+		position = position.clamp(Vector2(14.0, 14.0), WORLD_SIZE - Vector2(14.0, 14.0))
 		if movement["moved"]:
 			# Movement causality log: position changes feed the NEXT pre-fire refresh (no live retargeting, ADR-TECH-04).
-			print("[RUNTIME] player_moved dir=%s,%s player=(%.0f,%.0f)" % [movement["dir_x"], movement["dir_y"], position.x, position.y])
+			dbg_verbose("[RUNTIME] player_moved dir=%s,%s player=(%.0f,%.0f)" % [movement["dir_x"], movement["dir_y"], position.x, position.y])
 
 	player_visual.position = Vector2.ZERO
+
+	# --- Simple procedural animation: player bob + facing flip, enemy chase wobble ---
+	_anim_time += delta
+	if _player_sprite_node:
+		_player_sprite_node.position.y = sin(_anim_time * 10.0) * 1.4
+		if float(movement["dir_x"]) < -0.1:
+			_player_sprite_node.flip_h = true
+		elif float(movement["dir_x"]) > 0.1:
+			_player_sprite_node.flip_h = false
 
 	# Spawn grace is a real runtime phase: keep Player/Enemy/HUD presentation alive, but do not
 	# issue the first refresh/resolve/combat step until the full 1.0s grace has elapsed.
@@ -1261,11 +1428,25 @@ func _process(delta: float) -> void:
 		print("[TIMING][GRACE-END] tick=%d elapsed=1.000s; combat/session.step now permitted" % session.current_tick())
 	if spawn_grace_remaining > 0.0:
 		if not _grace_phase_logged:
-			print("[TIMING][GRACE] tick=%d remaining=%.3fs; presentation-only" % [session.current_tick(), spawn_grace_remaining])
+			dbg_verbose("[TIMING][GRACE] tick=%d remaining=%.3fs; presentation-only" % [session.current_tick(), spawn_grace_remaining])
 		_present_read_model(session.rules_state, {}, [], false, {})
 		if self_test_mode:
 			_self_test_step()
 		return
+
+	# --- Iteration 2: enemy chase AI + wave spawner (world-space; deterministic self-test path untouched) ---
+	if not self_test_mode:
+		for e in enemies:
+			if is_instance_valid(e.node):
+				var _to_player: Vector2 = position - e.node.position
+				if _to_player.length_squared() > 1.0:
+					e.node.position += _to_player.normalized() * float(e.speed) * delta
+				# Chase animation: face the player + subtle wobble so sprites don't read as static decals.
+				var spr: Sprite2D = e.visual
+				if spr:
+					spr.flip_h = _to_player.x < 0.0
+					spr.rotation = sin(_anim_time * 9.0 + float(e.stable_id) * 1.7) * 0.12
+		_update_waves(delta)
 
 	# --- build live candidates from live enemy nodes (adapter-normalized observations; read AFTER movement) ---
 	var live_candidates: Array = []
@@ -1278,6 +1459,10 @@ func _process(delta: float) -> void:
 	if not on_screen.is_empty():
 		cluster_center /= on_screen.size()
 	for e in on_screen:
+		# Engine observation boundary (ATTACK_RANGE): distant enemies chase visibly but are not
+		# targetable until inside attack range — the survivors-like pressure window.
+		if e.node.position.distance_to(position) > ATTACK_RANGE:
+			continue
 		live_candidates.append(ADAPTER.candidate_from_observation(
 			e.stable_id, e.node.position, position, cluster_center, e.hp, 1.0))
 
@@ -1285,9 +1470,9 @@ func _process(delta: float) -> void:
 	if resolve_delay_remaining > 0.0:
 		resolve_delay_remaining = maxf(0.0, resolve_delay_remaining - delta)
 		if resolve_delay_remaining <= 0.0:
-			print("[TIMING][DELAY-END] tick=%d elapsed=0.250s; resolve now permitted" % session.current_tick())
+			dbg_verbose("[TIMING][DELAY-END] tick=%d elapsed=0.250s; resolve now permitted" % session.current_tick())
 		else:
-			print("[TIMING][DELAY] tick=%d remaining=%.3fs; resolve blocked" % [session.current_tick(), resolve_delay_remaining])
+			dbg_verbose("[TIMING][DELAY] tick=%d remaining=%.3fs; resolve blocked" % [session.current_tick(), resolve_delay_remaining])
 			_present_read_model(session.rules_state, {}, [], false, {})
 			return
 
@@ -1336,12 +1521,49 @@ func _process(delta: float) -> void:
 		_self_test_step()
 
 
-func _enter_quiet_presentation() -> void:
-	# One-shot restrained non-color quiet-episode cue, bound ONLY to the no-target branch (S5 搂4.2, UX-03 S3).
+# --- Iteration 2: wave spawner — escalating edge spawns; walker swarms + brute walls from wave 3 ---
+func _update_waves(delta: float) -> void:
+	_wave_timer += delta
+	if _wave_timer < WAVE_INTERVAL:
+		return
+	_wave_timer = 0.0
+	var live_count: int = 0
+	for e in enemies:
+		if is_instance_valid(e.node):
+			live_count += 1
+	if live_count >= MAX_LIVE_ENEMIES:
+		return
+	_wave_index += 1
+	var walkers: int = 3 + _wave_index * 2
+	for i in range(walkers):
+		if live_count >= MAX_LIVE_ENEMIES:
+			break
+		_spawn_edge_enemy("walker")
+		live_count += 1
+	if _wave_index >= 3:
+		var brutes: int = 1 + int(_wave_index / 3)
+		for i in range(brutes):
+			if live_count >= MAX_LIVE_ENEMIES:
+				break
+			_spawn_edge_enemy("brute")
+			live_count += 1
+	print("[WAVE] wave=%d live_after=%d" % [_wave_index, live_count])
+
+
+func _spawn_edge_enemy(enemy_type: String) -> void:
+	# Spawn on a ring around the player (just outside the camera view), clamped into the world.
+	var angle: float = randf() * TAU
+	var pos: Vector2 = position + Vector2.from_angle(angle) * SPAWN_RING_RADIUS
+	pos = pos.clamp(Vector2(20.0, 20.0), WORLD_SIZE - Vector2(20.0, 20.0))
+	var hp: int = 3 if enemy_type == "brute" else 1
+	_new_enemy_node(pos, hp, ENEMY_TINT, enemy_type)
+
+
+func _enter_quiet_presentation() -> void:	# One-shot restrained non-color quiet-episode cue, bound ONLY to the no-target branch (S5 §4.2, UX-03 S3).
 	# Exact presentation form is NOT frozen (unresolved); here it is a single log line + the quiet label.
 	if not _quiet_episode_active:
 		_quiet_episode_active = true
-		print("[NO-TARGET-CUE] quiet episode begins (one-shot restrained non-color cue; bound no_target_branch)")
+		dbg_verbose("[NO-TARGET-CUE] quiet episode begins (one-shot restrained non-color cue; bound no_target_branch)")
 	if no_target_label:
 		no_target_label.text = "no target (quiet)"
 	# Read-model quiet face: presentation observes zero live candidates -> no_target quartile, no fabricated attack data.
@@ -1356,7 +1578,7 @@ func _leave_quiet_presentation() -> void:
 
 
 func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engine_quiet: bool = false, contact_fb: Dictionary = {}) -> void:
-	# --- HUD minimal face (S5 搂4.1): life/timer/b2, all existing as read-model fields, no invented values. ---
+	# --- HUD minimal face (S5 §4.1): life/timer/b2, all existing as read-model fields, no invented values. ---
 	# life: three-segment structure; segments_lost read from the rules trace (C5: real deduction, non-color).
 	var segments_lost: int = int(state.get("segments_lost", 0))
 	if segments_lost < 0:
@@ -1368,10 +1590,10 @@ func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engin
 		life_text += "[x]" if i < segments_lost else "[o]"
 	life_text += "  segments_lost=%d" % segments_lost
 	if life_label:
-		life_label.text = life_text
+		life_label.text = "生命  " + life_text.substr(5, 11)
 	# timer: current_tick (SESSION) + run_duration_bound opaque (value deferred to Systems; not promoted).
 	if timer_label:
-		timer_label.text = "TIMER tick=%d  run_bound=8min(opaque)" % session.current_tick()
+		timer_label.text = "时间  %02d:%02d" % [int(session.current_tick() / 60), int(session.current_tick()) % 60]
 	# b2: show current B2 phase (read from rules state).
 	var b2_phase: String = String(state.get("b2_phase", "pre"))
 	var b2_text: String = "B2: "
@@ -1382,9 +1604,9 @@ func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engin
 	else:
 		b2_text += "pre-fission"
 	if b2_label:
-		b2_label.text = b2_text
+		b2_label.text = "等级  1   经验  --"
 
-	# --- attack_state four states (S5 搂4.3), derived ONLY from rules trace fields. ---
+	# --- attack_state four states (S5 §4.3), derived ONLY from rules trace fields. ---
 	var no_target_branch: bool = bool(state.get("no_target_branch", false))
 	var hit_empty: bool = (state.get("hit_results", {}) as Dictionary).is_empty()
 	var snap_empty: bool = (state.get("target_snapshot_ids", []) as Array).is_empty()
@@ -1400,13 +1622,13 @@ func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engin
 	if state_label:
 		state_label.text = attack_text
 
-	# --- kill_state (S5 搂4.3): none -> killed while kill_outcomes is non-empty (settlement trace). ---
+	# --- kill_state (S5 §4.3): none -> killed while kill_outcomes is non-empty (settlement trace). ---
 	var kill_outcomes: Dictionary = state.get("kill_outcomes", {})
 	var kill_text: String = "kill: killed(%d)" % kill_outcomes.size() if not kill_outcomes.is_empty() else "kill: none"
 	if kill_label:
 		kill_label.text = kill_text
 
-	# --- hit_results_feedback binding marker (S5 搂4.3): each feedback class is emitted ONLY when its rule source is
+	# --- hit_results_feedback binding marker (S5 §4.3): each feedback class is emitted ONLY when its rule source is
 	#     non-empty (adapter gates lock/hit/kill); the HUD line shows the class -> source binding for auditability. ---
 	var lock_count: int = (fb.get("lock_target", []) as Array).size() if fb.get("lock_target", []) is Array else 0
 	var hit_count: int = (fb.get("hit", []) as Array).size() if fb.get("hit", []) is Array else 0
@@ -1419,7 +1641,7 @@ func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engin
 	if feedback_label:
 		feedback_label.text = fb_text
 
-	# --- invalidation presentation section (S5 搂4.3 visible part): "target invalid -> no hit this shot", no drain detail.
+	# --- invalidation presentation section (S5 §4.3 visible part): "target invalid -> no hit this shot", no drain detail.
 	var inv_text := ""
 	for e in events:
 		if e.get("type", "") == "invalidation_event":
@@ -1445,7 +1667,7 @@ func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engin
 	var line: String = "%s | %s | %s | %s | %s" % [attack_text, kill_text, fb_text, inv_text.strip_edges(), contact_text]
 	if line != _last_presented_line:
 		_last_presented_line = line
-		print("[READ-MODEL] %s" % line)
+		dbg_verbose("[READ-MODEL] %s" % line)
 
 
 func _emit_attack_trajectory_arc(points: PackedVector2Array, attack_pos: Vector2) -> void:
@@ -1500,7 +1722,7 @@ func _trigger_hit_impact_flash(impact_pos: Vector2) -> void:
 		var angle := TAU * i / 11.0
 		core_points.append(Vector2(cos(angle), sin(angle)) * 12.0)
 	core_ring.points = core_points
-	add_child(core_ring)
+	world_root.add_child(core_ring)
 
 	# Transition ring: 24-32 px, mid-cyan #00e5ff
 	var trans_ring := Line2D.new()
@@ -1512,7 +1734,7 @@ func _trigger_hit_impact_flash(impact_pos: Vector2) -> void:
 		var angle := TAU * i / 11.0
 		trans_points.append(Vector2(cos(angle), sin(angle)) * 28.0)
 	trans_ring.points = trans_points
-	add_child(trans_ring)
+	world_root.add_child(trans_ring)
 
 	# Falloff ring: 48 px, dark cyan #00838f
 	var fall_ring := Line2D.new()
@@ -1524,7 +1746,7 @@ func _trigger_hit_impact_flash(impact_pos: Vector2) -> void:
 		var angle := TAU * i / 11.0
 		fall_points.append(Vector2(cos(angle), sin(angle)) * 48.0)
 	fall_ring.points = fall_points
-	add_child(fall_ring)
+	world_root.add_child(fall_ring)
 
 	# Tween: expand and fade over 150ms
 	var tween := create_tween()
@@ -1545,7 +1767,7 @@ func _trigger_hit_impact_flash(impact_pos: Vector2) -> void:
 		if _hit_flash_particles:
 			_hit_flash_particles.visible = false
 	)
-	print("[VFX-01][HIT-IMPACT] core->transition->falloff (150ms); localized flash, no persistent glow")
+	dbg_verbose("[VFX-01][HIT-IMPACT] core->transition->falloff (150ms); localized flash, no persistent glow")
 
 
 func _resize_ring(ring: Line2D, base_radius: float, target_radius: float, t: float) -> void:
@@ -1578,7 +1800,13 @@ func _play_kill_dissolve(node: Node2D) -> void:
 	crack_line.visible = true
 	var crack_pts := PackedVector2Array([Vector2.ZERO, Vector2(30, 0), Vector2(15, -10)])
 	crack_line.points = crack_pts
-	add_child(crack_line)
+	crack_line.position = pos
+	world_root.add_child(crack_line)
+	# Lifecycle fix (2026-08-20 perf regression): crack_line leaked one visible Line2D per
+	# kill (never freed) — after dozens of kills the accumulated draw items caused the
+	# "quickly becomes laggy" report. Fade with the crack phase, then free.
+	crack_t.tween_property(crack_line, "modulate:a", 0.0, crack_duration).set_ease(Tween.EASE_IN)
+	crack_t.chain().tween_callback(crack_line.queue_free)
 
 	# Frame 2: collapse inward + rust flakes burst
 	var collapse_t := create_tween()
@@ -1587,11 +1815,10 @@ func _play_kill_dissolve(node: Node2D) -> void:
 	collapse_t.tween_property(node, "scale", Vector2(0.85, 0.55), collapse_duration).set_ease(Tween.EASE_IN_OUT)
 	collapse_t.tween_property(node, "rotation", 0.2, collapse_duration).set_ease(Tween.EASE_OUT)
 
-	# Rust flakes burst: 8-12 particles
+	# Rust flakes burst: 2-3 lightweight particles (was 8-12; per-kill node/tween spikes caused frame hitches).
+	# Keep a small readable burst without creating a particle node storm under wave pressure.
 	if _hit_flash_particles and _hit_flash_particles.is_inside_tree():
-		var rust_flakes_t := create_tween()
-		rust_flakes_t.set_parallel(true)  # Fix: was rust_flakes_t.duration which is invalid
-		for i in range(8, 13):
+		for i in range(2, 5):
 			var flake_pos := node.position + Vector2(randf() * 50 - 25, randf() * 50 - 25)
 			var flake := CPUParticles2D.new()
 			flake.name = "RustFlake_%d" % i
@@ -1611,7 +1838,7 @@ func _play_kill_dissolve(node: Node2D) -> void:
 			flake.angle_min = 0.0
 			flake.angle_max = 360.0
 			flake.position = flake_pos
-			add_child(flake)
+			world_root.add_child(flake)
 			# Animate outward then fade
 			var fade_t := create_tween()
 			fade_t.tween_property(flake, "modulate:a", 0.0, 0.30).set_ease(Tween.EASE_IN)
@@ -1624,7 +1851,7 @@ func _play_kill_dissolve(node: Node2D) -> void:
 	dissolve_t.tween_property(node, "modulate:a", 0.0, dissolve_duration).set_ease(Tween.EASE_IN)
 	dissolve_t.chain().tween_callback(node.queue_free)
 
-	print("[VFX-02][KILL-DISSOLVE] crack-collapse->flake-burst->ash (300ms total, no persistent glow, no full-screen flash)")
+	dbg_verbose("[VFX-02][KILL-DISSOLVE] crack-collapse->flake-burst->ash (300ms total, no persistent glow, no full-screen flash)")
 
 
 func _emit_clear_effect() -> void:
@@ -1640,7 +1867,7 @@ func _emit_clear_effect() -> void:
 		_clear_effect_tween.tween_property(_pierce_clear_line, "width", 26.0, 0.22).set_ease(Tween.EASE_OUT)
 		_clear_effect_tween.tween_property(_pierce_clear_line, "default_color:a", 0.0, 0.48).set_delay(0.08).set_ease(Tween.EASE_IN)
 		_clear_effect_tween.chain().tween_callback(func(): _pierce_clear_line.visible = false)
-		print("[VFX][B2-PIERCE-CLEAR] horizontal core -> widening corridor -> open space (0.48s)")
+		dbg_verbose("[VFX][B2-PIERCE-CLEAR] horizontal core -> widening corridor -> open space (0.48s)")
 	elif _upgrade_second_done and _fan_clear_line and _fan_clear_left_line and _fan_clear_right_line:
 		var fan_mid_end := position + Vector2.RIGHT * 300.0
 		var fan_left_end := position + Vector2.RIGHT.rotated(-0.52) * 300.0
@@ -1660,7 +1887,7 @@ func _emit_clear_effect() -> void:
 		_clear_effect_tween.chain().tween_callback(func(): _fan_clear_left_line.visible = false)
 		_clear_effect_tween.tween_callback(func(): _fan_clear_line.visible = false)
 		_clear_effect_tween.tween_callback(func(): _fan_clear_right_line.visible = false)
-		print("[VFX][B2-FAN-CLEAR] three arcs -> three corridors -> open space (0.48s)")
+		dbg_verbose("[VFX][B2-FAN-CLEAR] three arcs -> three corridors -> open space (0.48s)")
 
 
 func _trigger_upgrade_confirmation(idx: int) -> void:
@@ -1675,7 +1902,7 @@ func _trigger_upgrade_confirmation(idx: int) -> void:
 	_upgrade_confirm_tween.tween_property(_upgrade_confirm_flash, "color:a", 0.22, 0.08).set_ease(Tween.EASE_OUT)
 	_upgrade_confirm_tween.tween_property(_upgrade_confirm_flash, "color:a", 0.0, 0.32).set_ease(Tween.EASE_IN)
 	_upgrade_confirm_tween.tween_callback(func(): _upgrade_confirm_flash.visible = false)
-	print("[VFX][UPGRADE-CONFIRM] card=%d short interruptible pulse behind text (0.40s)" % idx)
+	dbg_verbose("[VFX][UPGRADE-CONFIRM] card=%d short interruptible pulse behind text (0.40s)" % idx)
 
 
 func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
@@ -1694,9 +1921,11 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 				_attack_sfx_player.stream = preload("res://assets/audio/attack_pierce.wav")
 			else:
 				_attack_sfx_player.stream = preload("res://assets/audio/attack_normal.wav")
-			# Follow player position for 2D audio
-			_attack_sfx_player.position = position
-			_attack_sfx_player.play()
+				# Follow player position for 2D audio
+				_attack_sfx_player.position = position
+				# Slight pitch variation per shot breaks the machine-gun monotony of a repeating SFX.
+				_attack_sfx_player.pitch_scale = 0.94 + randf() * 0.12
+				_attack_sfx_player.play()
 		for e in on_screen:
 			if e.stable_id == sid and is_instance_valid(e.node):
 				attack_line.points = PackedVector2Array([Vector2.ZERO, e.node.position - position])
@@ -1706,13 +1935,13 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 				if _attack_glow_line:
 					_attack_glow_line.points = attack_line.points
 					_attack_glow_line.visible = true
-		print("[AUTO-ATTACK] locked id=%d" % sid)
+		dbg_verbose("[AUTO-ATTACK] locked id=%d" % sid)
 		if "refresh_fire" in steps:
 			resolve_delay_remaining = 0.25
-			print("[TIMING][LOCK] tick=%d resolve_delay=0.250s; resolve blocked" % session.current_tick())
+			dbg_verbose("[TIMING][LOCK] tick=%d resolve_delay=0.250s; resolve blocked" % session.current_tick())
 			# Movement causality (ADR-TECH-04 / UX-02 U2-B): this refresh re-observed positions AFTER movement,
 			# so a moved player changes the NEXT shot's lock — the current shot's snapshot stays immutable.
-			print("[LOCK-REFRESH] player=(%.0f,%.0f) lock=%s (movement re-locks NEXT refresh; current shot snapshot immutable)" % [position.x, position.y, str(snap)])
+			dbg_verbose("[LOCK-REFRESH] player=(%.0f,%.0f) lock=%s (movement re-locks NEXT refresh; current shot snapshot immutable)" % [position.x, position.y, str(snap)])
 		# B2: fan arcs — draw curved bezier arcs when fan upgrade is active.
 		if _fan_left_line.visible:
 			var target_end: Vector2 = attack_line.points[1] if attack_line.points.size() > 1 else Vector2.ZERO
@@ -1732,32 +1961,42 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 				if _fan_left_glow_line:
 					_fan_left_glow_line.points = _fan_left_line.points
 					_fan_right_glow_line.points = _fan_right_line.points
-		print("[FB-BIND] lock=%s (emitted only while target_snapshot_ids non-empty)" % str(fb["lock_target"]))
+		dbg_verbose("[FB-BIND] lock=%s (emitted only while target_snapshot_ids non-empty)" % str(fb["lock_target"]))
 	else:
 		attack_line.visible = false
 		if _attack_glow_line:
 			_attack_glow_line.visible = false
 		if fb.get("no_target", false):
-			print("[FB-BIND] no lock/hit/kill (no_target branch; quiet, no fabrication)")
+			dbg_verbose("[FB-BIND] no lock/hit/kill (no_target branch; quiet, no fabrication)")
 
 # Hit feedback bound to hit_results (VFX-01: Hit Impact Flash).
 	if not fb["hit"].is_empty():
-		print("[FB-BIND] hit=%s (emitted only while hit_results non-empty)" % str(fb["hit"]))
+		dbg_verbose("[FB-BIND] hit=%s (emitted only while hit_results non-empty)" % str(fb["hit"]))
 		for hid in fb["hit"]:
 			for e in on_screen:
 				if e.stable_id == int(hid) and is_instance_valid(e.node):
 					_trigger_hit_impact_flash(e.node.position)
 		for hid in fb["hit"]:
-			print("[HIT] target id=%d" % hid)
+			dbg_verbose("[HIT] target id=%d" % hid)
 
 	# Kill feedback bound to kill_outcomes -> kill tween: scale up + fade out, then remove.
 	if not fb["kill"].is_empty():
-		# B5: Play enemy death SFX
+		# B5 + reward-audio layer (2026-08-21): randomized pitch + combo pitch-climb + throttling —
+		# the survivors-like "popcorn" kill feel instead of a fixed-pitch metronome.
 		if not self_test_mode:
-			_enemy_death_sfx_player.play()
-		print("[FB-BIND] kill=%s (emitted only while kill_outcomes non-empty)" % str(fb["kill"]))
+			var now_k: float = Time.get_ticks_msec() / 1000.0
+			if now_k - _last_kill_sfx_time >= 0.1:   # throttle: clustered kills merge into one pop
+				if now_k - _last_kill_time < 2.0:
+					_kill_streak += 1
+				else:
+					_kill_streak = 0
+				_last_kill_time = now_k
+				_last_kill_sfx_time = now_k
+				_enemy_death_sfx_player.pitch_scale = clampf(1.0 + _kill_streak * 0.03, 1.0, 1.3) * randf_range(0.9, 1.1)
+				_enemy_death_sfx_player.play()
+		dbg_verbose("[FB-BIND] kill=%s (emitted only while kill_outcomes non-empty)" % str(fb["kill"]))
 	for kid in fb["kill"]:
-		print("[KILL] id=%d died -> kill tween (scale+fade)" % kid)
+		dbg_verbose("[KILL] id=%d died -> kill tween (scale+fade)" % kid)
 		for e in on_screen:
 			if e.stable_id == kid and is_instance_valid(e.node):
 				if not self_test_mode:
@@ -1767,22 +2006,22 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 					e.node.queue_free()
 				e.node = null
 		_emit_clear_effect()
-		print("[CLEAR] enemy id=%d cleared from play" % kid)
+		dbg_verbose("[CLEAR] enemy id=%d cleared from play" % kid)
 	if not fb["kill"].is_empty():
 		var remaining: int = 0
 		for e in on_screen:
 			if is_instance_valid(e.node):
 				remaining += 1
-		print("[RUNTIME] live enemies=%d" % remaining)
+		dbg_verbose("[RUNTIME] live enemies=%d" % remaining)
 
 	# C4 contact feedback bound to the rules contact events (no fabrication when none present).
 	if not contact_fb["damage"].is_empty():
 		for dmg in contact_fb["damage"]:
-			print("[CONTACT] damage victim_id=%d segments_lost=%d" % [int(dmg["victim_id"]), int(dmg["segments_lost"])])
+			dbg_verbose("[CONTACT] damage victim_id=%d segments_lost=%d" % [int(dmg["victim_id"]), int(dmg["segments_lost"])])
 	if bool(contact_fb.get("invulnerable", false)):
-		print("[CONTACT-INVULN] brief invulnerability entered (no repeat damage during protection)")
+		dbg_verbose("[CONTACT-INVULN] brief invulnerability entered (no repeat damage during protection)")
 	if not contact_fb["rearm"].is_empty():
-		print("[CONTACT-REARM] re-armed ids=%s (separation ended invulnerability; future contact legal)" % str(contact_fb["rearm"]))
+		dbg_verbose("[CONTACT-REARM] re-armed ids=%s (separation ended invulnerability; future contact legal)" % str(contact_fb["rearm"]))
 
 	# Full read-model presentation from this step's rules trace + gated feedback (R2) + contact feedback (C5).
 	_present_read_model(state, fb, result.get("events", []), false, contact_fb)

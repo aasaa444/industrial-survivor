@@ -52,3 +52,10 @@ coverage/
 #      deliverables; regenerable transient artifacts) ----
 .dsh-vision-router/
 .skill-evals/
+
+# ---- Phase A repo hygiene (2026-08-20): archived stray MCP
+#      request/response JSON + untracked staging dirs (content
+#      preserved on disk, kept out of version control) ----
+_archive/
+_phase4_vfx_stage/
+dsh_gdmcp_staging/
