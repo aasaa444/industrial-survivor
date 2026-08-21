@@ -1,0 +1,30 @@
+{
+  "schema_version": "runtime-receipt-v1",
+  "contract_id": "upgrade_build_v1",
+  "status": "passed",
+  "candidate_git_sha": "43be64f597de82c8228e9ce0a76ba88028f6381e",
+  "project_root": "D:\\Game\\New_Game\\godot_game_dev",
+  "verified_transactions": [
+    {
+      "transaction_id": "tx-choice-1787347068",
+      "branch": "build_choice (3-card, pierce)",
+      "evidence": "qa/evidence/upgrade_tx/tx-choice-1787347068.jsonl",
+      "verifier_status": "passed",
+      "exit_code": 0
+    },
+    {
+      "transaction_id": "tx-upgrade-1787347071",
+      "branch": "build_upgrade (single-card, fan rank 2)",
+      "evidence": "qa/evidence/upgrade_tx/tx-upgrade-1787347071.jsonl",
+      "verifier_status": "passed",
+      "exit_code": 0
+    }
+  ],
+  "gate_review_basis": "staged-candidate runs tx-choice-1787347041 / tx-upgrade-1787347045 (digest 41b3fa29bc2e3945d47243ff7d003c6097d7e1ca3bff0cea7666485b632ab78f) reviewed before the gated commit; only git_sha binding differed (expected mid-flight)",
+  "additional_validation": {
+    "self_test": "exit 0",
+    "pacing_change": "XP thresholds 5/25/60 -> 10/45/120 calibrated from p4_six_minute_victory.log kill curve"
+  },
+  "reviewed_at_utc": "2026-08-22",
+  "evidence_boundary": "L2 runtime transaction only; L3 visual acceptance and user acceptance remain separate and pending"
+}

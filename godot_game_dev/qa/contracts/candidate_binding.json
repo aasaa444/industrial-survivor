@@ -1,14 +1,21 @@
 {
   "schema_version": "candidate-binding-v1",
-  "candidate_git_sha": "34ee88ee03060bc0781d7f9ea37288f4349ca3aa",
-  "base_git_sha": "6f1cc76b76225a923509dfee000962ce6b981f8c",
+  "candidate_git_sha": "43be64f597de82c8228e9ce0a76ba88028f6381e",
+  "base_git_sha": "4e749e8998edda0d6b90e8664c306849336c12f8",
   "project_root": "D:\\Game\\New_Game\\godot_game_dev",
   "godot_version": "4.7.1-stable (official)",
-  "bound_at_utc": "2026-08-22",
+  "bound_at_utc": "2026-08-22 (pacing calibration candidate)",
   "candidate_contents": {
-    "production": ["godot_game_dev/runtime/main.gd"],
-    "contract": ["godot_game_dev/qa/contracts/upgrade_build_v1.json"],
-    "qa_driver": ["godot_game_dev/qa/qa_upgrade_transaction.gd", "godot_game_dev/qa/qa_upgrade_transaction.tscn"],
+    "production": [
+      "godot_game_dev/runtime/main.gd"
+    ],
+    "contract": [
+      "godot_game_dev/qa/contracts/upgrade_build_v1.json"
+    ],
+    "qa_driver": [
+      "godot_game_dev/qa/qa_upgrade_transaction.gd",
+      "godot_game_dev/qa/qa_upgrade_transaction.tscn"
+    ],
     "evidence": [
       "qa/evidence/upgrade_tx/tx-choice-1787345918.jsonl",
       "qa/evidence/upgrade_tx/tx-upgrade-1787345922.jsonl",
