@@ -85,9 +85,7 @@ func dbg_verbose(message: String) -> void:
 @export var contact_separate_dist: float = 26.0   # C4 candidate separation magnitude (NOT a frozen rule constant)
 @export var contact_invuln_ticks: int = 30         # C4 candidate invulnerability ticks (NOT a frozen rule constant)
 @export var terminal_result_duration: float = 1.2  # T4 candidate short-result duration before auto-restart (NOT frozen)
-@export var run_duration_ticks: int = 4800         # T4 candidate opaque eight-minute run-bound in session ticks (NOT frozen;
-												   # exact tick<->time mapping deferred to Systems; victory path also covered by
-												   # the rules-core TERMINAL-victory fixture)
+@export var run_duration_ticks: int = 21600        # 6-minute Demo target at fixed 60Hz (benchmark-adapted; tune from full-run data)
 
 var session  # DshSession instance (untyped to avoid a global-class-cache dependency at headless scene load)
 var locked_this_epoch: bool = false
@@ -324,10 +322,10 @@ var world_root: Node2D
 # --- Iteration 2: fixed-step tick + chase AI + wave pressure ---
 const TICK_HZ: float = 60.0                     # fixed session tick rate; run_duration 4800 ticks = 80s regardless of FPS
 var _tick_accumulator: float = 0.0
-const WAVE_INTERVAL: float = 3.5                # seconds between waves (after grace)
-const MAX_LIVE_ENEMIES: int = 22                # pressure/readability/perf cap
-const WALKER_SPEED: float = 62.0                # fast, fragile
-const BRUTE_SPEED: float = 34.0                 # slow, tanky (hp 3)
+const WAVE_INTERVAL: float = 7.0                # early pacing: sell strength before pressure
+const MAX_LIVE_ENEMIES: int = 26                # current-machine safe cap after 6-minute soak
+const WALKER_SPEED: float = 48.0                # opening-safe; escalates by wave
+const BRUTE_SPEED: float = 28.0                 # slow, tanky
 const ATTACK_RANGE: float = 280.0               # engine observation boundary: enemies beyond this are not targetable
 const ENEMY_TINT: Color = Color(0.9, 0.35, 0.2)
 const WORLD_SIZE: Vector2 = Vector2(2304.0, 1296.0)   # 2x2 viewport scrolling arena (survivors-style)
@@ -1641,14 +1639,15 @@ func _update_waves(delta: float) -> void:
 	if live_count >= MAX_LIVE_ENEMIES:
 		return
 	_wave_index += 1
-	var walkers: int = 3 + _wave_index * 2
+	# Benchmark-adapted pacing curve: first 30s establishes power, then density/behavior rise.
+	var walkers: int = 2 if _wave_index <= 2 else (3 + _wave_index)
 	for i in range(walkers):
 		if live_count >= MAX_LIVE_ENEMIES:
 			break
 		_spawn_edge_enemy("walker")
 		live_count += 1
-	if _wave_index >= 3:
-		var brutes: int = 1 + int(_wave_index / 3)
+	if _wave_index >= 5:
+		var brutes: int = 1 + int((_wave_index - 5) / 3)
 		for i in range(brutes):
 			if live_count >= MAX_LIVE_ENEMIES:
 				break
