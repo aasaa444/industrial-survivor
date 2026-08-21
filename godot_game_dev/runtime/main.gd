@@ -127,6 +127,7 @@ var player_xp: int = 0
 var rail_pierce_active: bool = false
 var scatter_fan_active: bool = false
 var kinetic_pulse_active: bool = false
+var active_build: String = ""
 var _pulse_flash_remaining: float = 0.0
 var _pulse_flash_radius: float = 0.0
 var energy_cores: Array = []  # [{node: Polygon2D, active: bool}]; bounded visual object pool
@@ -433,9 +434,15 @@ func _update_energy_cores(delta: float) -> void:
 					print("[GROWTH] energy_collected xp=%d/%d" % [player_xp, display_threshold])
 				elif display_threshold == 0 and player_xp % 10 == 0:
 					print("[GROWTH] energy_collected xp=%d/MAX" % player_xp)
-				if player_level == 1 and player_xp >= XP_TO_LEVEL_2 and not _upgrade_first_done and not _upgrade_pending:
+				if player_level == 1 and player_xp >= XP_TO_LEVEL_2 and not _upgrade_pending:
 					player_level = 2
 					_start_upgrade("build_choice")
+				elif player_level == 2 and player_xp >= XP_TO_LEVEL_3 and not _upgrade_pending:
+					player_level = 3
+					_start_upgrade("build_upgrade")
+				elif player_level == 3 and player_xp >= XP_TO_LEVEL_4 and not _upgrade_pending:
+					player_level = 4
+					_start_upgrade("build_upgrade")
 
 
 func _update_growth_hud() -> void:
@@ -1267,6 +1274,16 @@ func _start_upgrade(phase: String) -> void:
 			{"id": 2, "keyword": "[2] 散射扇面模块", "difference": "扇面控场", "effect": "一发覆盖三个敌人", "shortcut": "2"},
 			{"id": 3, "keyword": "[3] 动能冲击模块", "difference": "近距脱围", "effect": "近身敌人被冲开", "shortcut": "3"},
 		]
+	elif phase == "build_upgrade":
+		var title: String = "模块强化"
+		var effect: String = "攻击节奏提升"
+		if active_build == "pierce":
+			title = "轨道穿透强化"; effect = "穿透轨道更宽、更亮"
+		elif active_build == "fan":
+			title = "散射扇面强化"; effect = "扇面轨迹更宽、更亮"
+		elif active_build == "pulse":
+			title = "动能冲击强化"; effect = "冲击范围扩大"
+		_upgrade_cards = [{"id": 1, "keyword": "[1] " + title, "difference": "构筑协同", "effect": effect, "shortcut": "1"}]
 	elif phase == "pierce":
 		_upgrade_cards = [{"id": 1, "keyword": "[1] 轨道穿透模块", "difference": "工业清场构筑", "effect": "一发穿过两个敌人", "shortcut": "1"}]
 	elif phase == "fan":
@@ -1371,6 +1388,8 @@ func _finalize_upgrade() -> void:
 	var applied_phase: String = _upgrade_phase
 	if applied_phase == "build_choice":
 		applied_phase = ["pierce", "fan", "pulse"][idx]
+	elif applied_phase == "build_upgrade":
+		applied_phase = active_build
 	# Apply Rail/Fan through rules; Pulse is a runtime spatial module.
 	var result: Dictionary = session.step({"task": "upgrade_select", "selected_card_id": card["id"], "b2_phase": applied_phase})
 	var upgrade_fb: Dictionary = ADAPTER.upgrade_feedback_from_result(result)
@@ -1396,11 +1415,12 @@ func _finalize_upgrade() -> void:
 		_upgrade_sfx_player.stream = preload("res://assets/audio/upgrade_applied.wav")
 		_upgrade_sfx_player.play()
 		# Mark phase as complete.
-		# Any first build choice closes the initial build-selection gate.
-		_upgrade_first_done = true
+		if _upgrade_phase == "build_choice":
+			active_build = applied_phase
+			_upgrade_first_done = true
 		if applied_phase == "pierce":
 			rail_pierce_active = true
-			attack_line.width = 6.0
+			attack_line.width = minf(10.0, attack_line.width + 1.5)
 		elif applied_phase == "fan":
 			_upgrade_second_done = true
 			scatter_fan_active = true
@@ -2057,17 +2077,8 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 	# Lock / auto-attack line points at the locked target.
 	if not fb["lock_target"].is_empty():
 		var sid: int = int(fb["lock_target"][0])
-		# B5: Play attack SFX (normal or pierce depending on upgrade state)
-		if not self_test_mode:
-			if _upgrade_first_done:
-				_attack_sfx_player.stream = preload("res://assets/audio/attack_pierce.wav")
-			else:
-				_attack_sfx_player.stream = preload("res://assets/audio/attack_normal.wav")
-			# Follow player position for 2D audio and play both normal/pierce variants.
-			_attack_sfx_player.position = position
-			# Slight pitch variation per shot breaks the machine-gun monotony of a repeating SFX.
-			_attack_sfx_player.pitch_scale = 0.94 + randf() * 0.12
-			_attack_sfx_player.play()
+			# Audio is intentionally not played on lock: a stale lock is not an attack.
+			# Playback is bound to actual hit results below.
 		for e in on_screen:
 			if e.stable_id == sid and is_instance_valid(e.node):
 				attack_line.points = PackedVector2Array([Vector2.ZERO, e.node.position - position])
@@ -2111,8 +2122,14 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 		if fb.get("no_target", false):
 			dbg_verbose("[FB-BIND] no lock/hit/kill (no_target branch; quiet, no fabrication)")
 
-# Hit feedback bound to hit_results (VFX-01: Hit Impact Flash).
+	# Hit feedback bound to hit_results (VFX-01: Hit Impact Flash).
 	if not fb["hit"].is_empty():
+		# Attack sound is a consequence of a real hit, never of an empty/stale target lock.
+		if not self_test_mode:
+			_attack_sfx_player.stream = preload("res://assets/audio/attack_pierce.wav") if rail_pierce_active else preload("res://assets/audio/attack_normal.wav")
+			_attack_sfx_player.position = position
+			_attack_sfx_player.pitch_scale = 0.94 + randf() * 0.12
+			_attack_sfx_player.play()
 		dbg_verbose("[FB-BIND] hit=%s (emitted only while hit_results non-empty)" % str(fb["hit"]))
 		for hid in fb["hit"]:
 			for e in on_screen:
