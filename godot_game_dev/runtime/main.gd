@@ -393,6 +393,22 @@ func _toggle_sfx_mute() -> void:
 	print("[AUDIO] SFX %s (M toggles)" % ("muted" if _sfx_muted else "unmuted"))
 
 
+func _input(event: InputEvent) -> void:
+	# Capture card clicks before Control propagation; all mouse paths converge here.
+	if _card_state != 2 or _card_input_guarded:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		var mouse_pos: Vector2 = event.position
+		for i in range(_card_nodes.size()):
+			var card: Dictionary = _card_nodes[i]
+			var bg: TextureRect = card.bg
+			if is_instance_valid(bg) and bg.visible and bg.get_global_rect().has_point(mouse_pos):
+				_card_input_mode = "mouse_global"
+				_select_upgrade_card(i)
+				get_viewport().set_input_as_handled()
+				return
+
+
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_M:
@@ -994,6 +1010,11 @@ func _auto_restart() -> void:
 	if _pause_layer:
 		_pause_layer.visible = false
 	get_tree().paused = false
+	_update_growth_hud()
+	if life_label:
+		life_label.text = "生命  [o][o][o]"
+	if timer_label:
+		timer_label.text = "剩余  06:00"
 	# Reset B2 upgrade runtime state.
 	_upgrade_pending = false
 	_upgrade_phase = ""
