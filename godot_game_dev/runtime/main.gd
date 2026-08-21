@@ -128,6 +128,7 @@ var rail_pierce_active: bool = false
 var scatter_fan_active: bool = false
 var kinetic_pulse_active: bool = false
 var active_build: String = ""
+var build_rank: int = 0
 var _pulse_flash_remaining: float = 0.0
 var _pulse_flash_radius: float = 0.0
 var energy_cores: Array = []  # [{node: Polygon2D, active: bool}]; bounded visual object pool
@@ -838,6 +839,8 @@ func _auto_restart() -> void:
 	_tick_accumulator = 0.0
 	player_level = 1
 	player_xp = 0
+	active_build = ""
+	build_rank = 0
 	rail_pierce_active = false
 	for core in energy_cores:
 		if is_instance_valid(core.node): core.node.visible = false
@@ -1312,11 +1315,11 @@ func _start_upgrade(phase: String) -> void:
 		var title: String = "模块强化"
 		var effect: String = "攻击节奏提升"
 		if active_build == "pierce":
-			title = "轨道穿透强化"; effect = "穿透轨道更宽、更亮"
+			title = "轨道穿透强化"; effect = "穿透轨道更宽、更亮" if build_rank == 1 else "穿透目标再增加"
 		elif active_build == "fan":
-			title = "散射扇面强化"; effect = "扇面轨迹更宽、更亮"
+			title = "散射扇面强化"; effect = "扇面轨迹更宽、更亮" if build_rank == 1 else "扇面覆盖范围扩大"
 		elif active_build == "pulse":
-			title = "动能冲击强化"; effect = "冲击范围扩大"
+			title = "动能冲击强化"; effect = "冲击范围扩大" if build_rank == 1 else "冲击击退更强"
 		_upgrade_cards = [{"id": 1, "keyword": "[1] " + title, "difference": "构筑协同", "effect": effect, "shortcut": "1"}]
 	elif phase == "pierce":
 		_upgrade_cards = [{"id": 1, "keyword": "[1] 轨道穿透模块", "difference": "工业清场构筑", "effect": "一发穿过两个敌人", "shortcut": "1"}]
@@ -1453,7 +1456,10 @@ func _finalize_upgrade() -> void:
 		# Mark phase as complete.
 		if _upgrade_phase == "build_choice":
 			active_build = applied_phase
+			build_rank = 1
 			_upgrade_first_done = true
+		elif applied_phase == active_build:
+			build_rank = min(build_rank + 1, 3)
 		if applied_phase == "pierce":
 			rail_pierce_active = true
 			attack_line.width = minf(10.0, attack_line.width + 1.5)
@@ -1659,8 +1665,8 @@ func _process(delta: float) -> void:
 		var pulse_hit: bool = false
 		for e in on_screen:
 			var pulse_dist: float = e.node.position.distance_to(position)
-			if pulse_dist < 150.0 and pulse_dist > 1.0:
-				e.node.position += (e.node.position - position).normalized() * 90.0 * delta
+				if pulse_dist < (150.0 + build_rank * 35.0) and pulse_dist > 1.0:
+					e.node.position += (e.node.position - position).normalized() * (90.0 + build_rank * 25.0) * delta
 				pulse_hit = true
 		if pulse_hit:
 			_pulse_flash_remaining = 0.18
@@ -1697,7 +1703,7 @@ func _process(delta: float) -> void:
 	# task routing: refresh when we need a fresh lock this epoch, else resolve.
 	var task: String = ADAPTER.pick_task(not locked_this_epoch, locked_this_epoch)
 	# T4: the envelope carries the session terminal domain input (timer_completed) + C4 contact observations.
-	var atk_max: int = 999 if self_test_mode else (3 if scatter_fan_active else (2 if rail_pierce_active else int(session.rules_state.get("attack_max_targets", 1))) )
+	var atk_max: int = 999 if self_test_mode else (3 + build_rank if active_build == "fan" else (2 + build_rank if active_build == "pierce" else int(session.rules_state.get("attack_max_targets", 1))))
 	var env: Dictionary = ADAPTER.make_envelope(
 		task, live_candidates, movement, 1, [], contact_input, contact_invuln_ticks, 1,
 		{"timer_completed": session.current_tick() >= run_duration_ticks},
