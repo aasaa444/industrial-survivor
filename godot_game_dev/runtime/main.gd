@@ -1316,6 +1316,30 @@ func _sync_upgrade_card_visibility() -> void:
 			_card_hovered_idx = -1 if _card_hovered_idx == i else _card_hovered_idx
 
 
+func _layout_upgrade_cards() -> void:
+	var view_size: Vector2 = get_viewport_rect().size
+	var count: int = _upgrade_cards.size()
+	if count <= 0:
+		return
+	var card_width: float = minf(250.0, view_size.x * 0.23)
+	var card_height: float = minf(150.0, view_size.y * 0.28)
+	var gap: float = minf(28.0, view_size.x * 0.025)
+	var total_width: float = card_width * count + gap * (count - 1)
+	var left: float = (view_size.x - total_width) * 0.5
+	var top: float = view_size.y * 0.52 - card_height * 0.5
+	for i in range(_card_nodes.size()):
+		var card: Dictionary = _card_nodes[i]
+		var bg: TextureRect = card.bg
+		if not is_instance_valid(bg):
+			continue
+		bg.size = Vector2(card_width, card_height)
+		if i < count:
+			bg.position = Vector2(left + i * (card_width + gap), top)
+			bg.visible = true
+		else:
+			bg.visible = false
+
+
 func _animate_cards_in() -> void:
 	var backdrop := _card_hud.get_node_or_null("CardBackdrop") as ColorRect
 	if backdrop:
@@ -1324,11 +1348,6 @@ func _animate_cards_in() -> void:
 		bt.tween_property(backdrop, "color", Color(0.0, 0.0, 0.0, 0.25), 0.2).set_ease(Tween.EASE_OUT)
 	# One authoritative sync before layout/animation: card visibility and hit eligibility match the pool.
 	_sync_upgrade_card_visibility()
-	# A single build-upgrade card is centered in the viewport; the initial build choice uses the row.
-	if _upgrade_cards.size() == 1:
-		var only_bg: TextureRect = _card_nodes[0].bg
-		var view_size: Vector2 = get_viewport_rect().size
-		only_bg.position = Vector2((view_size.x - only_bg.size.x) * 0.5, (view_size.y - only_bg.size.y) * 0.5)
 	for i in range(3):
 		var card: Dictionary = _card_nodes[i]
 		var bg: TextureRect = card.bg
@@ -1515,6 +1534,7 @@ func _start_upgrade(phase: String) -> void:
 			if is_instance_valid(card_node.effect):
 				card_node.effect.text = card_data["effect"]
 	_upgrade_prompt_label.text = "选择构筑 — 按 1/2/3，或 ← → + 回车" if phase == "build_choice" else "选择升级 — 按 1 确认"
+	_layout_upgrade_cards()
 	_animate_cards_in()
 	# B5: Play upgrade open SFX
 	if not self_test_mode:
