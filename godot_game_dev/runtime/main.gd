@@ -930,7 +930,7 @@ func _build_card_widget(idx: int, cx: float, cy: float, w: float, h: float) -> D
 	bg.name = "CardBg_%d" % idx
 	bg.size = Vector2(w, h)
 	bg.position = Vector2(cx - w / 2.0, cy - h / 2.0)
-	bg.mouse_filter = Control.MOUSE_FILTER_STOP
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg.mouse_default_cursor_shape = Control.CURSOR_ARROW
 	bg.visible = false
 	# Load card texture based on index (pierce = 0,1,2; fan = 3,4,5 will be set later)
@@ -1145,6 +1145,11 @@ func _animate_cards_in() -> void:
 		backdrop.visible = true
 		var bt := create_tween()
 		bt.tween_property(backdrop, "color", Color(0.0, 0.0, 0.0, 0.25), 0.2).set_ease(Tween.EASE_OUT)
+	# A single build-upgrade card is centered in the viewport; the initial build choice uses the row.
+	if _upgrade_cards.size() == 1:
+		var only_bg: TextureRect = _card_nodes[0].bg
+		var view_size: Vector2 = get_viewport_rect().size
+		only_bg.position = Vector2((view_size.x - only_bg.size.x) * 0.5, (view_size.y - only_bg.size.y) * 0.5)
 	for i in range(3):
 		var card: Dictionary = _card_nodes[i]
 		var bg: TextureRect = card.bg
