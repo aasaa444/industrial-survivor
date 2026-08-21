@@ -118,6 +118,20 @@ var result_label: Label
 var enemies: Array = []          # [{node, stable_id, hp, hit_flash}]
 var next_stable_id: int = 1
 
+# --- Slice B: first complete growth path (energy cores -> XP -> Rail Pierce) ---
+const XP_TO_LEVEL_2: int = 5
+const XP_TO_LEVEL_3: int = 10
+const XP_TO_LEVEL_4: int = 15
+const XP_PICKUP_RADIUS: float = 420.0
+const XP_PICKUP_SPEED: float = 520.0
+var player_level: int = 1
+var player_xp: int = 0
+var rail_pierce_active: bool = false
+var scatter_fan_active: bool = false
+var kinetic_pulse_active: bool = false
+var energy_cores: Array = []  # [{node: Polygon2D, active: bool}]; bounded visual object pool
+var xp_label: Label
+
 # B5: Arena background
 var arena_bg: Sprite2D
 
@@ -373,6 +387,71 @@ func _new_enemy_node(pos: Vector2, hp: int, color: Color, enemy_type: String = "
 	return e
 
 
+# --- Slice B energy core pool: bounded runtime visuals, reused after pickup ---
+func _spawn_energy_core(world_pos: Vector2) -> void:
+	var core: Dictionary = {}
+	for candidate in energy_cores:
+		if not bool(candidate.get("active", false)):
+			core = candidate
+			break
+	if core.is_empty():
+		var diamond := Polygon2D.new()
+		diamond.name = "EnergyCore"
+		diamond.polygon = PackedVector2Array([Vector2(0, -7), Vector2(6, 0), Vector2(0, 7), Vector2(-6, 0)])
+		diamond.color = Color(0.20, 0.92, 1.0, 0.95)
+		world_root.add_child(diamond)
+		core = {"node": diamond, "active": false}
+		energy_cores.append(core)
+	var node: Polygon2D = core.node
+	node.position = world_pos
+	node.visible = true
+	core.active = true
+	print("[GROWTH] energy_drop at=(%.0f,%.0f) active_cores=%d" % [world_pos.x, world_pos.y, energy_cores.size()])
+
+
+func _update_energy_cores(delta: float) -> void:
+	for core in energy_cores:
+		if not bool(core.get("active", false)):
+			continue
+		var node: Polygon2D = core.node
+		if not is_instance_valid(node):
+			core.active = false
+			continue
+		var to_player: Vector2 = position - node.position
+		if to_player.length() <= XP_PICKUP_RADIUS:
+			node.position += to_player.normalized() * XP_PICKUP_SPEED * delta
+			if node.position.distance_to(position) <= 12.0:
+				node.visible = false
+				core.active = false
+				player_xp += 1
+				print("[GROWTH] energy_collected xp=%d/%d" % [player_xp, XP_TO_LEVEL_2])
+				if player_level == 1 and player_xp >= XP_TO_LEVEL_2 and not _upgrade_first_done and not _upgrade_pending:
+					player_level = 2
+					_start_upgrade("pierce")
+				elif player_level == 2 and player_xp >= XP_TO_LEVEL_3 and not _upgrade_second_done and not _upgrade_pending:
+					player_level = 3
+					_start_upgrade("fan")
+				elif player_level == 3 and player_xp >= XP_TO_LEVEL_4 and not kinetic_pulse_active and not _upgrade_pending:
+					player_level = 4
+					_start_upgrade("pulse")
+
+
+func _update_growth_hud() -> void:
+	if b2_label:
+		var build_name: String = "基础模块"
+		if kinetic_pulse_active: build_name = "动能冲击"
+		elif scatter_fan_active: build_name = "散射扇面"
+		elif rail_pierce_active: build_name = "轨道穿透"
+		b2_label.text = "等级 %d  %s" % [player_level, build_name]
+	if xp_label:
+		var next_threshold: int = XP_TO_LEVEL_2 if player_level <= 1 else (XP_TO_LEVEL_3 if player_level == 2 else (XP_TO_LEVEL_4 if player_level == 3 else 0))
+		if next_threshold > 0:
+			var filled: int = min(player_xp, next_threshold)
+			xp_label.text = "能量  [" + "#".repeat(filled) + "-".repeat(max(0, next_threshold - filled)) + "]  %d/%d" % [filled, next_threshold]
+		else:
+			xp_label.text = "能量  已满  %d" % player_xp
+
+
 func _build_visuals(for_self_test: bool) -> void:
 	# World layer first: everything world-space is parented here, not to the moving player root.
 	world_root = Node2D.new()
@@ -464,11 +543,17 @@ func _build_visuals(for_self_test: bool) -> void:
 
 	b2_label = Label.new()
 	b2_label.position = Vector2(16, 48)
-	b2_label.text = "等级 1   经验 --"
+	b2_label.text = "等级 1"
 	hud.add_child(b2_label)
 
+	xp_label = Label.new()
+	xp_label.position = Vector2(16, 66)
+	xp_label.text = "能量  [-----]  0/5"
+	xp_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0))
+	hud.add_child(xp_label)
+
 	objective_label = Label.new()
-	objective_label.position = Vector2(16, 66)
+	objective_label.position = Vector2(16, 84)
 	objective_label.text = "目标  WASD / 方向键移动，自动攻击"
 	objective_label.add_theme_color_override("font_color", Color(0.86, 0.86, 0.82))
 	hud.add_child(objective_label)
@@ -699,6 +784,7 @@ func _apply_light_separation(victim_id: int, on_screen: Array) -> void:
 		away = Vector2(0, -1)   # degenerate identical position -> deterministic upward nudge
 	away = away.normalized()
 	position += away * contact_separate_dist
+	position = position.clamp(Vector2(14.0, 14.0), WORLD_SIZE - Vector2(14.0, 14.0))
 	dbg_verbose("[CONTACT-SEPARATE] victim_id=%d player=(%.0f,%.0f) (light separation; candidate mag %.0f)" % [victim_id, position.x, position.y, contact_separate_dist])
 
 
@@ -708,6 +794,7 @@ func _apply_light_separation(victim_id: int, on_screen: Array) -> void:
 # automatic immediate reset (session.reset(): run identity advances, RNG reseeded, clean rules state) + fresh enemies.
 func _handle_result_phase(delta: float) -> void:
 	if result_label:
+		result_label.visible = true
 		if _result_state == "defeat":
 			result_label.text = "RESULT: 失败 —— 生命耗尽（任意键立即重试）"
 		elif _result_state == "victory":
@@ -736,6 +823,12 @@ func _auto_restart() -> void:
 	_wave_timer = WAVE_INTERVAL - 2.0
 	_wave_index = 0
 	_tick_accumulator = 0.0
+	player_level = 1
+	player_xp = 0
+	rail_pierce_active = false
+	for core in energy_cores:
+		if is_instance_valid(core.node): core.node.visible = false
+		core.active = false
 	position = WORLD_SIZE * 0.5   # start centered in the scrolling arena
 	attack_line.visible = false
 	locked_this_epoch = false
@@ -748,6 +841,7 @@ func _auto_restart() -> void:
 	_result_remaining = 0.0
 	if result_label:
 		result_label.text = ""
+		result_label.visible = false
 	# Reset B2 upgrade runtime state.
 	_upgrade_pending = false
 	_upgrade_phase = ""
@@ -1150,15 +1244,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # --- B2: check for upgrade window triggers (tick-based; before any combat) ---
 func _check_upgrade_windows() -> void:
-	if self_test_mode:
-		return  # self-test is a deterministic regression; upgrade windows are skipped
-	if _upgrade_pending or _in_result:
-		return
-	var tick: int = session.current_tick()
-	if not _upgrade_first_done and tick >= 1200:
-		_start_upgrade("pierce")
-	elif not _upgrade_second_done and tick >= 3000:
-		_start_upgrade("fan")
+	# Slice B: progression triggers upgrades from collected energy, never from fixed clock ticks.
+	return
 
 
 # --- B2: start an upgrade window (pause combat, animate cards in) ---
@@ -1173,17 +1260,11 @@ func _start_upgrade(phase: String) -> void:
 	_card_hovered_idx = -1
 	_card_input_mode = "keyboard"
 	if phase == "pierce":
-		_upgrade_cards = [
-			{"id": 1, "keyword": "[1] 穿透 I", "difference": "力场穿透", "effect": "命中上限 +2", "shortcut": "1"},
-			{"id": 2, "keyword": "[2] 穿透 II", "difference": "相位穿透", "effect": "命中上限 +2", "shortcut": "2"},
-			{"id": 3, "keyword": "[3] 穿透 III", "difference": "量子隧穿", "effect": "命中上限 +2", "shortcut": "3"},
-		]
-	else:  # fan
-		_upgrade_cards = [
-			{"id": 1, "keyword": "[1] 扇裂 I", "difference": "左弧强化", "effect": "攻击弧数 +2", "shortcut": "1"},
-			{"id": 2, "keyword": "[2] 扇裂 II", "difference": "右弧强化", "effect": "攻击弧数 +2", "shortcut": "2"},
-			{"id": 3, "keyword": "[3] 扇裂 III", "difference": "三弧均衡", "effect": "攻击弧数 +2", "shortcut": "3"},
-		]
+		_upgrade_cards = [{"id": 1, "keyword": "[1] 轨道穿透模块", "difference": "工业清场构筑", "effect": "一发穿过两个敌人", "shortcut": "1"}]
+	elif phase == "fan":
+		_upgrade_cards = [{"id": 1, "keyword": "[1] 散射扇面模块", "difference": "扇面控场构筑", "effect": "一发覆盖三个敌人", "shortcut": "1"}]
+	else:
+		_upgrade_cards = [{"id": 1, "keyword": "[1] 动能冲击模块", "difference": "近距脱围构筑", "effect": "近身敌人被冲开", "shortcut": "1"}]
 	# Populate card labels.
 	for i in range(3):
 		if i < _upgrade_cards.size():
@@ -1195,7 +1276,7 @@ func _start_upgrade(phase: String) -> void:
 				card_node.diff.text = card_data["difference"]
 			if is_instance_valid(card_node.effect):
 				card_node.effect.text = card_data["effect"]
-	_upgrade_prompt_label.text = "B2 升级选择 — 按 1/2/3 或 ← → + 回车，或点击卡牌"
+	_upgrade_prompt_label.text = "选择轨道穿透模块 — 按 1 确认" if phase == "pierce" else "B2 升级选择 — 按 1/2/3 或 ← → + 回车，或点击卡牌"
 	_animate_cards_in()
 	# B5: Play upgrade open SFX
 	if not self_test_mode:
@@ -1294,12 +1375,17 @@ func _finalize_upgrade() -> void:
 	if not self_test_mode:
 		_upgrade_sfx_player.stream = preload("res://assets/audio/upgrade_applied.wav")
 		_upgrade_sfx_player.play()
-	# Mark phase as complete.
-	if _upgrade_phase == "pierce":
-		_upgrade_first_done = true
-	else:
-		_upgrade_second_done = true
-	# Hide all card UI.
+		# Mark phase as complete.
+		if _upgrade_phase == "pierce":
+			_upgrade_first_done = true
+			rail_pierce_active = true
+			attack_line.width = 6.0
+		elif _upgrade_phase == "fan":
+			_upgrade_second_done = true
+			scatter_fan_active = true
+		else:
+			kinetic_pulse_active = true
+		# Hide all card UI.
 	_upgrade_prompt_label.visible = false
 	for c in _card_nodes:
 		if is_instance_valid(c.bg):
@@ -1434,6 +1520,10 @@ func _process(delta: float) -> void:
 			_self_test_step()
 		return
 
+	# --- Slice B energy collection and growth HUD ---
+	_update_energy_cores(delta)
+	_update_growth_hud()
+
 	# --- Iteration 2: enemy chase AI + wave spawner (world-space; deterministic self-test path untouched) ---
 	if not self_test_mode:
 		for e in enemies:
@@ -1479,8 +1569,25 @@ func _process(delta: float) -> void:
 	# --- C4 contact observations: engine overlap -> adapter translation -> domain contact input ---
 	var contact_input: Array = _overlapping_enemy_ids(on_screen)
 
+	if kinetic_pulse_active:
+		# Real close-range pulse: push nearby enemies away from the player every combat step.
+		for e in on_screen:
+			var pulse_dist: float = e.node.position.distance_to(position)
+			if pulse_dist < 150.0 and pulse_dist > 1.0:
+				e.node.position += (e.node.position - position).normalized() * 90.0 * delta
+
 	# --- fire cadence (rules-core drive via session) ---
 	if live_candidates.is_empty():
+		# Still drive the rules once per no-target epoch so timer completion is not swallowed
+		# by the presentation early-return. Victory is a terminal rule, not an attack side effect.
+		var quiet_env: Dictionary = ADAPTER.make_envelope(
+			"refresh_fire", [], movement, 1, [], contact_input, contact_invuln_ticks, 1,
+			{"timer_completed": session.current_tick() >= run_duration_ticks}, -1, 1)
+		var quiet_result: Dictionary = session.step(quiet_env)
+		_apply_feedback(quiet_result, on_screen)
+		_enter_result_if_needed()
+		if _in_result:
+			return
 		# Quiet no-target presentation (UX-03 S1/S2): no fabricated lock/hit; optional one-shot restrained cue.
 		_enter_quiet_presentation()
 		attack_line.visible = false
@@ -1500,7 +1607,7 @@ func _process(delta: float) -> void:
 	# task routing: refresh when we need a fresh lock this epoch, else resolve.
 	var task: String = ADAPTER.pick_task(not locked_this_epoch, locked_this_epoch)
 	# T4: the envelope carries the session terminal domain input (timer_completed) + C4 contact observations.
-	var atk_max: int = 999 if self_test_mode else int(session.rules_state.get("attack_max_targets", 1))
+	var atk_max: int = 999 if self_test_mode else (3 if scatter_fan_active else (2 if rail_pierce_active else int(session.rules_state.get("attack_max_targets", 1))) )
 	var env: Dictionary = ADAPTER.make_envelope(
 		task, live_candidates, movement, 1, [], contact_input, contact_invuln_ticks, 1,
 		{"timer_completed": session.current_tick() >= run_duration_ticks},
@@ -1921,11 +2028,11 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 				_attack_sfx_player.stream = preload("res://assets/audio/attack_pierce.wav")
 			else:
 				_attack_sfx_player.stream = preload("res://assets/audio/attack_normal.wav")
-				# Follow player position for 2D audio
-				_attack_sfx_player.position = position
-				# Slight pitch variation per shot breaks the machine-gun monotony of a repeating SFX.
-				_attack_sfx_player.pitch_scale = 0.94 + randf() * 0.12
-				_attack_sfx_player.play()
+			# Follow player position for 2D audio and play both normal/pierce variants.
+			_attack_sfx_player.position = position
+			# Slight pitch variation per shot breaks the machine-gun monotony of a repeating SFX.
+			_attack_sfx_player.pitch_scale = 0.94 + randf() * 0.12
+			_attack_sfx_player.play()
 		for e in on_screen:
 			if e.stable_id == sid and is_instance_valid(e.node):
 				attack_line.points = PackedVector2Array([Vector2.ZERO, e.node.position - position])
@@ -1979,6 +2086,16 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 		for hid in fb["hit"]:
 			dbg_verbose("[HIT] target id=%d" % hid)
 
+	# Sync rule-owned candidate HP back to the engine entity. Without this, brute HP reset
+	# on every refresh and could never die through normal combat.
+	var rule_candidates: Array = state.get("live_candidates", [])
+	for cand in rule_candidates:
+		var cand_id: int = int(cand.get("stable_id", -1))
+		for e in on_screen:
+			if e.stable_id == cand_id:
+				e.hp = int(cand.get("hp", e.hp))
+				break
+
 	# Kill feedback bound to kill_outcomes -> kill tween: scale up + fade out, then remove.
 	if not fb["kill"].is_empty():
 		# B5 + reward-audio layer (2026-08-21): randomized pitch + combo pitch-climb + throttling —
@@ -1999,13 +2116,19 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 		dbg_verbose("[KILL] id=%d died -> kill tween (scale+fade)" % kid)
 		for e in on_screen:
 			if e.stable_id == kid and is_instance_valid(e.node):
+				# Death -> energy core drop (Slice B reward loop).
+				if not self_test_mode and is_instance_valid(e.node):
+					_spawn_energy_core(e.node.position)
 				if not self_test_mode:
 					# Crack-collapse / dissolve: asymmetric squash, rotation, then fade.
 					_play_kill_dissolve(e.node)
 				else:
 					e.node.queue_free()
-				e.node = null
-		_emit_clear_effect()
+				# Remove the dead runtime record immediately; live cap and perf metrics must
+				# describe live entities, not the entire kill history.
+				enemies.erase(e)
+				break
+			_emit_clear_effect()
 		dbg_verbose("[CLEAR] enemy id=%d cleared from play" % kid)
 	if not fb["kill"].is_empty():
 		var remaining: int = 0
