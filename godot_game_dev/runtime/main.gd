@@ -998,10 +998,10 @@ func _build_card_widget(idx: int, cx: float, cy: float, w: float, h: float) -> D
 	eff.text = ""
 	vbox.add_child(eff)
 
-	# Connect mouse signals (using callables with bind).
 	bg.mouse_entered.connect(_on_card_mouse_entered.bind(idx))
 	bg.mouse_exited.connect(_on_card_mouse_exited.bind(idx))
-	bg.gui_input.connect(_on_card_gui_input.bind(idx))
+	# Selection is handled centrally by _unhandled_input using the actual global rect.
+	# Do not attach a second gui_input writer to the card subtree.
 
 	return {"bg": bg, "container": vbox, "keyword": kw, "diff": diff, "effect": eff}
 
@@ -1244,6 +1244,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _card_input_guarded:
 		return
+	if event is InputEventMouseButton:
+		var mouse_event := event as InputEventMouseButton
+		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
+			var local_pos: Vector2 = mouse_event.position
+			for i in range(_card_nodes.size()):
+				var candidate: Dictionary = _card_nodes[i]
+				var card_bg: TextureRect = candidate.bg
+				if is_instance_valid(card_bg) and card_bg.visible and card_bg.get_global_rect().has_point(local_pos):
+					_card_input_mode = "mouse_global"
+					_select_upgrade_card(i)
+					return
+			return
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
 			KEY_1, KEY_KP_1:
