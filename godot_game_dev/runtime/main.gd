@@ -1015,6 +1015,9 @@ func _update_card_visuals() -> void:
 		var bg: TextureRect = card.bg
 		if not is_instance_valid(bg):
 			continue
+		# UI is a read model: hidden cards must not remain clickable/visible when the
+		# current UpgradeState exposes only one build-upgrade choice.
+		bg.visible = i < _upgrade_cards.size()
 		var kw: Label = card.keyword
 		var diff: Label = card.diff
 		var eff: Label = card.effect
@@ -1147,7 +1150,9 @@ func _animate_cards_in() -> void:
 		var bg: TextureRect = card.bg
 		if not is_instance_valid(bg):
 			continue
-		bg.visible = true
+		bg.visible = i < _upgrade_cards.size()
+		if not bg.visible:
+			continue
 		bg.modulate.a = 0.0
 		var target_y := bg.position.y
 		bg.position.y = target_y + 40
