@@ -963,6 +963,7 @@ func _build_card_widget(idx: int, cx: float, cy: float, w: float, h: float) -> D
 	var vbox := VBoxContainer.new()
 	vbox.name = "CardVBox_%d" % idx
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.offset_left = 14
 	vbox.offset_right = -14
 	vbox.offset_top = 14
