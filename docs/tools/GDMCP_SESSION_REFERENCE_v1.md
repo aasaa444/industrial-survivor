@@ -35,6 +35,6 @@ When the user-owned editor already owns MCP port `9080`, a separate headless imp
 ## Safety
 
 - Use project-local GDMCP launcher first for project-aware actions.
-- Do not PATH-fallback, mass-kill Godot, or silently change ports.
+- Do not PATH-fallback, mass-kill Godot, silently change ports, or wrap Godot in shell `timeout`/watchdog termination. Validation must use a normal shutdown path; if graceful stop fails, report `blocked` rather than trigger a crash dialog.
 - Tool-created runtime process trees require explicit lease ownership before release.
 - Revalidate after Godot, GDMCP, Windows, or port policy changes.

@@ -117,9 +117,9 @@ var enemies: Array = []          # [{node, stable_id, hp, hit_flash}]
 var next_stable_id: int = 1
 
 # --- Slice B: first complete growth path (energy cores -> XP -> Rail Pierce) ---
-const XP_TO_LEVEL_2: int = 5
-const XP_TO_LEVEL_3: int = 10
-const XP_TO_LEVEL_4: int = 15
+const XP_TO_LEVEL_2: int = 5       # target: ~30s first build
+const XP_TO_LEVEL_3: int = 25      # target: ~60-90s second build
+const XP_TO_LEVEL_4: int = 60      # target: ~2-3min third build
 const XP_PICKUP_RADIUS: float = 420.0
 const XP_PICKUP_SPEED: float = 520.0
 var player_level: int = 1
@@ -158,6 +158,7 @@ var _result_remaining: float = 0.0     # countdown to automatic immediate retry 
 
 var self_test_mode: bool = false
 var qa_auto_select: bool = false
+var qa_select_index: int = 0
 var self_test_t: float = 0.0
 var self_test_killed: Array = []
 var self_test_fire_issued: bool = false
@@ -312,9 +313,11 @@ func _self_test_mode_detect() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a == "--self-test": self_test_mode = true
 		if a == "--qa-auto-select": qa_auto_select = true
+		if a.begins_with("--qa-select="): qa_select_index = clampi(int(a.trim_prefix("--qa-select=")), 0, 2)
 	for a in OS.get_cmdline_args():
 		if a == "--self-test": self_test_mode = true
 		if a == "--qa-auto-select": qa_auto_select = true
+		if a.begins_with("--qa-select="): qa_select_index = clampi(int(a.trim_prefix("--qa-select=")), 0, 2)
 
 
 # Fixed world layer: the root Main node IS the player and moves with input, so all
@@ -426,16 +429,13 @@ func _update_energy_cores(delta: float) -> void:
 				core.active = false
 				player_xp += 1
 				var display_threshold: int = XP_TO_LEVEL_2 if player_level <= 1 else (XP_TO_LEVEL_3 if player_level == 2 else (XP_TO_LEVEL_4 if player_level == 3 else 0))
-				print("[GROWTH] energy_collected xp=%d/%d" % [min(player_xp, display_threshold) if display_threshold > 0 else player_xp, display_threshold])
+				if display_threshold > 0 and (player_xp == display_threshold or player_xp % 5 == 0):
+					print("[GROWTH] energy_collected xp=%d/%d" % [player_xp, display_threshold])
+				elif display_threshold == 0 and player_xp % 10 == 0:
+					print("[GROWTH] energy_collected xp=%d/MAX" % player_xp)
 				if player_level == 1 and player_xp >= XP_TO_LEVEL_2 and not _upgrade_first_done and not _upgrade_pending:
 					player_level = 2
-					_start_upgrade("pierce")
-				elif player_level == 2 and player_xp >= XP_TO_LEVEL_3 and not _upgrade_second_done and not _upgrade_pending:
-					player_level = 3
-					_start_upgrade("fan")
-				elif player_level == 3 and player_xp >= XP_TO_LEVEL_4 and not kinetic_pulse_active and not _upgrade_pending:
-					player_level = 4
-					_start_upgrade("pulse")
+					_start_upgrade("build_choice")
 
 
 func _update_growth_hud() -> void:
@@ -1261,7 +1261,13 @@ func _start_upgrade(phase: String) -> void:
 	_card_focused_idx = 1
 	_card_hovered_idx = -1
 	_card_input_mode = "keyboard"
-	if phase == "pierce":
+	if phase == "build_choice":
+		_upgrade_cards = [
+			{"id": 1, "keyword": "[1] 轨道穿透模块", "difference": "直线清场", "effect": "一发穿过两个敌人", "shortcut": "1"},
+			{"id": 2, "keyword": "[2] 散射扇面模块", "difference": "扇面控场", "effect": "一发覆盖三个敌人", "shortcut": "2"},
+			{"id": 3, "keyword": "[3] 动能冲击模块", "difference": "近距脱围", "effect": "近身敌人被冲开", "shortcut": "3"},
+		]
+	elif phase == "pierce":
 		_upgrade_cards = [{"id": 1, "keyword": "[1] 轨道穿透模块", "difference": "工业清场构筑", "effect": "一发穿过两个敌人", "shortcut": "1"}]
 	elif phase == "fan":
 		_upgrade_cards = [{"id": 1, "keyword": "[1] 散射扇面模块", "difference": "扇面控场构筑", "effect": "一发覆盖三个敌人", "shortcut": "1"}]
@@ -1278,7 +1284,7 @@ func _start_upgrade(phase: String) -> void:
 				card_node.diff.text = card_data["difference"]
 			if is_instance_valid(card_node.effect):
 				card_node.effect.text = card_data["effect"]
-	_upgrade_prompt_label.text = "选择轨道穿透模块 — 按 1 确认" if phase == "pierce" else "B2 升级选择 — 按 1/2/3 或 ← → + 回车，或点击卡牌"
+	_upgrade_prompt_label.text = "选择构筑 — 按 1/2/3，或 ← → + 回车" if phase == "build_choice" else "选择升级 — 按 1 确认"
 	_animate_cards_in()
 	# B5: Play upgrade open SFX
 	if not self_test_mode:
@@ -1304,7 +1310,7 @@ func _handle_upgrade_phase(delta: float) -> void:
 			# has one card, so a physical 1 press remains unambiguous and guarded.
 			if qa_auto_select and not _card_input_guarded:
 				_card_input_mode = "qa_auto"
-				_select_upgrade_card(0)
+				_select_upgrade_card(mini(qa_select_index, _upgrade_cards.size() - 1))
 			elif Input.is_key_pressed(KEY_1) and not _card_input_guarded:
 				_card_input_mode = "keyboard"
 				_select_upgrade_card(0)
@@ -1362,13 +1368,18 @@ func _finalize_upgrade() -> void:
 		_upgrade_pending = false
 		return
 	var card: Dictionary = _upgrade_cards[idx]
-	# Apply the upgrade via session.step (rules-core owned).
-	var result: Dictionary = session.step({"task": "upgrade_select", "selected_card_id": card["id"], "b2_phase": _upgrade_phase})
+	var applied_phase: String = _upgrade_phase
+	if applied_phase == "build_choice":
+		applied_phase = ["pierce", "fan", "pulse"][idx]
+	# Apply Rail/Fan through rules; Pulse is a runtime spatial module.
+	var result: Dictionary = session.step({"task": "upgrade_select", "selected_card_id": card["id"], "b2_phase": applied_phase})
 	var upgrade_fb: Dictionary = ADAPTER.upgrade_feedback_from_result(result)
+	if applied_phase == "pulse":
+		upgrade_fb["upgrade_fired"] = true
+		upgrade_fb["phase"] = "pulse"
 	if upgrade_fb["upgrade_fired"]:
 		print("[B2-UPGRADE] applied phase=%s card=%d max_targets=%d fan_arcs=%d" % [
-			upgrade_fb["phase"], upgrade_fb["selected_card_id"],
-			upgrade_fb["attack_max_targets"], upgrade_fb["attack_fan_arcs"]])
+			applied_phase, card["id"], upgrade_fb.get("attack_max_targets", 1), upgrade_fb.get("attack_fan_arcs", 1)])
 		# Apply visual effects based on phase.
 		if upgrade_fb["phase"] == "pierce":
 			attack_line.width = 6.0   # wider line for pierce
@@ -1385,14 +1396,15 @@ func _finalize_upgrade() -> void:
 		_upgrade_sfx_player.stream = preload("res://assets/audio/upgrade_applied.wav")
 		_upgrade_sfx_player.play()
 		# Mark phase as complete.
-		if _upgrade_phase == "pierce":
-			_upgrade_first_done = true
+		# Any first build choice closes the initial build-selection gate.
+		_upgrade_first_done = true
+		if applied_phase == "pierce":
 			rail_pierce_active = true
 			attack_line.width = 6.0
-		elif _upgrade_phase == "fan":
+		elif applied_phase == "fan":
 			_upgrade_second_done = true
 			scatter_fan_active = true
-		else:
+		elif applied_phase == "pulse":
 			kinetic_pulse_active = true
 		# Hide all card UI.
 	_upgrade_prompt_label.visible = false
