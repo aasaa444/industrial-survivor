@@ -141,9 +141,13 @@ var enemies: Array = []          # [{node, stable_id, hp, hit_flash}]
 var next_stable_id: int = 1
 
 # --- Slice B: first complete growth path (energy cores -> XP -> Rail Pierce) ---
-const XP_TO_LEVEL_2: int = 5       # target: ~30s first build
-const XP_TO_LEVEL_3: int = 25      # target: ~60-90s second build
-const XP_TO_LEVEL_4: int = 60      # target: ~2-3min third build
+# Pacing calibrated 2026-08-22 from the six-minute soak (p4_six_minute_victory.log):
+# observed kill curve 30s->8, 60s->46, 90s->98, 150s->215 makes 5/25/60 hit at
+# 13s/15s/17s (all growth front-loaded in the first 20s). 10/45/120 restores the
+# survivors-like curve: first build ~30s, second ~75-90s, third ~2-2.5min.
+const XP_TO_LEVEL_2: int = 10      # target: ~30s first build
+const XP_TO_LEVEL_3: int = 45      # target: ~60-90s second build
+const XP_TO_LEVEL_4: int = 120     # target: ~2-3min third build
 const XP_PICKUP_RADIUS: float = 420.0
 const XP_PICKUP_SPEED: float = 520.0
 var progression_state: Dictionary = {"xp": 0, "level": 1}

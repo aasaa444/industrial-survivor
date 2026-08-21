@@ -214,7 +214,8 @@ func _drive_choice() -> void:
 		["[GROWTH] energy_drop", "[GROWTH] energy_collected"], ["stdout log of this run"])
 
 	# Step 2 mutate: threshold crossing -> level 2 + build_choice window pending once.
-	for i in range(4):
+	var to_level_2: int = int(main.XP_TO_LEVEL_2)
+	for i in range(to_level_2 - 1):
 		main._spawn_energy_core(main.position)
 	if not await _wait_until(func(): return _pending() and _phase() == "build_choice", 3.0):
 		_fail("mutate: build_choice window not pending (pending=%s phase=%s)" % [str(_pending()), _phase()])
@@ -286,7 +287,7 @@ func _drive_choice() -> void:
 # --- branch B: single-card build_upgrade -> fan rank 2 ------------------------
 func _drive_upgrade() -> void:
 	# Setup (not evidenced): first build = fan via the same contract command.
-	for i in range(5):
+	for i in range(int(main.XP_TO_LEVEL_2)):
 		main._spawn_energy_core(main.position)
 	if not await _wait_until(func(): return _pending() and _phase() == "build_choice", 3.0):
 		_fail("setup: build_choice window not pending")
@@ -316,7 +317,8 @@ func _drive_upgrade() -> void:
 		["[GROWTH] energy_drop", "[GROWTH] energy_collected"], ["stdout log of this run"])
 
 	# Step 2 mutate: cross to level 3 -> single-card build_upgrade window.
-	for i in range(25):
+	var to_level_3: int = int(main.XP_TO_LEVEL_3)
+	for i in range(to_level_3 - _xp() + 2):
 		main._spawn_energy_core(main.position)
 	if not await _wait_until(func(): return _pending() and _phase() == "build_upgrade", 3.0):
 		_fail("mutate: build_upgrade window not pending (pending=%s phase=%s)" % [str(_pending()), _phase()])
