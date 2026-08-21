@@ -1,10 +1,10 @@
 {
   "schema_version": "candidate-binding-v1",
-  "candidate_git_sha": "c61937fad7bd7b0c626b7c796827bdbddad2375f",
+  "candidate_git_sha": "d9057b6",
   "base_git_sha": "43be64f597de82c8228e9ce0a76ba88028f6381e",
   "project_root": "D:\\Game\\New_Game\\godot_game_dev",
   "godot_version": "4.7.1-stable (official)",
-  "bound_at_utc": "2026-08-22 (XP collection fix + pickup feedback candidate)",
+  "bound_at_utc": "2026-08-22 (final demo acceptance package)",
   "candidate_contents": {
     "production": [
       "godot_game_dev/runtime/main.gd"
@@ -31,5 +31,15 @@
     "gdunit4": "60/60 passed (adapter_contract_test, rules_core_test)",
     "runtime_transaction_verifier": "passed on both branches with git_sha binding",
     "l1_writer_scan": "every mirror write is inside _sync_progression_read_model"
+  },
+  "release_tree_git_sha": "55ba8e1fcb666ce2be5834db891cadf75e8cc94d",
+  "transaction_code_sha": "c61937fad7bd7b0c626b7c796827bdbddad2375f",
+  "export_artifacts": {
+    "release_exe": "godot_game_dev/export/build/NewGameDemo.exe",
+    "release_sha256_prefix": "aabce0ea53941510",
+    "debug_exe_with_console": "godot_game_dev/export/build/NewGameDemo_debug.console.exe",
+    "window_title": "Industrial Survivor Demo",
+    "godot_version": "4.7.1-stable",
+    "preset": "Windows Desktop (x86_64, embedded pck)"
   }
 }
