@@ -399,7 +399,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_toggle_sfx_mute()
 		elif event.keycode == KEY_ESCAPE and not _in_result and not _upgrade_pending:
 			_toggle_pause()
-		elif event.keycode == KEY_R and _in_result:
+		elif event.keycode == KEY_R and (_in_result or _paused):
 			_auto_restart()
 
 
@@ -441,6 +441,7 @@ func _show_result_overlay() -> void:
 	_result_title.text = "胜利" if _result_state == "victory" else "失败"
 	_result_detail.text = "时间  %02d:%02d\n等级  %d\n击杀  %d\n构筑  %s" % [int(session.current_tick() / 60), int(session.current_tick()) % 60, player_level, run_kills, (active_build if active_build != "" else "基础模块")]
 	get_tree().paused = true
+	_paused = true
 
 
 func _toggle_pause() -> void:
@@ -953,6 +954,12 @@ func _handle_result_phase(delta: float) -> void:
 # the single RNG is reseeded, and the rules state is rebuilt fresh (segments_lost=0, terminal cleared, snapshots/results
 # cleared) — so a new run carries NO cross-run loss. This node re-spawns fresh placeholder enemies for the new run.
 func _auto_restart() -> void:
+	_paused = false
+	get_tree().paused = false
+	if _result_panel:
+		_result_panel.visible = false
+	if _pause_layer:
+		_pause_layer.visible = false
 	session.reset()
 	for e in enemies:
 		if is_instance_valid(e.node):
