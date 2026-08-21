@@ -622,33 +622,37 @@ func _build_visuals(for_self_test: bool) -> void:
 	_card_hud.layer = 10
 	add_child(_card_hud)
 
-	# Semi-transparent backdrop (spans full viewport, blocks mouse passthrough during card selection).
+	# Semi-transparent backdrop covers current viewport and blocks mouse passthrough.
+	var ui_size: Vector2 = get_viewport_rect().size
 	var backdrop := ColorRect.new()
 	backdrop.name = "CardBackdrop"
-	backdrop.color = Color(0.0, 0.0, 0.0, 0.0)
-	backdrop.size = Vector2(640, 360)
+	backdrop.color = Color(0.0, 0.0, 0.0, 0.55)
+	backdrop.size = ui_size
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	backdrop.visible = false
 	_card_hud.add_child(backdrop)
 
 	_upgrade_prompt_label = Label.new()
-	_upgrade_prompt_label.position = Vector2(0, 332)
-	_upgrade_prompt_label.size = Vector2(640, 20)
+	_upgrade_prompt_label.position = Vector2(0, ui_size.y * 0.78)
+	_upgrade_prompt_label.size = Vector2(ui_size.x, 28)
 	_upgrade_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_upgrade_prompt_label.text = ""
 	_upgrade_prompt_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.4))
-	_upgrade_prompt_label.add_theme_font_size_override("font_size", 13)
+	_upgrade_prompt_label.add_theme_font_size_override("font_size", 16)
 	_upgrade_prompt_label.visible = false
 	_card_hud.add_child(_upgrade_prompt_label)
 
-	# Three card containers: ColorRect background + VBoxContainer with three Label children.
-	var card_centers_x := [160.0, 320.0, 480.0]
-	var card_width := 160.0
-	var card_height := 96.0
-	var card_center_y := 270.0
+	# Responsive three-card row centered in the actual viewport.
+	var card_width: float = minf(250.0, ui_size.x * 0.23)
+	var card_height: float = minf(150.0, ui_size.y * 0.28)
+	var card_gap: float = minf(28.0, ui_size.x * 0.025)
+	var total_width: float = card_width * 3.0 + card_gap * 2.0
+	var row_left: float = (ui_size.x - total_width) * 0.5
+	var card_center_y: float = ui_size.y * 0.52
 
 	for i in range(3):
-		var card_data := _build_card_widget(i, card_centers_x[i], card_center_y, card_width, card_height)
+		var cx: float = row_left + card_width * 0.5 + i * (card_width + card_gap)
+		var card_data := _build_card_widget(i, cx, card_center_y, card_width, card_height)
 		_card_hud.add_child(card_data.bg)
 		_card_nodes.append(card_data)
 
@@ -959,30 +963,37 @@ func _build_card_widget(idx: int, cx: float, cy: float, w: float, h: float) -> D
 	var vbox := VBoxContainer.new()
 	vbox.name = "CardVBox_%d" % idx
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.add_theme_constant_override("separation", 2)
+	vbox.offset_left = 14
+	vbox.offset_right = -14
+	vbox.offset_top = 14
+	vbox.offset_bottom = -14
+	vbox.add_theme_constant_override("separation", 6)
 	bg.add_child(vbox)
 
 	# Tier 1: Keyword (18px, bold).
 	var kw := Label.new()
 	kw.name = "Keyword_%d" % idx
-	kw.add_theme_font_size_override("font_size", 18)
+	kw.add_theme_font_size_override("font_size", 20)
 	kw.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	kw.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	kw.text = ""
 	vbox.add_child(kw)
 
 	# Tier 2: Difference dimension (14px, regular).
 	var diff := Label.new()
 	diff.name = "Diff_%d" % idx
-	diff.add_theme_font_size_override("font_size", 14)
-	diff.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
+	diff.add_theme_font_size_override("font_size", 15)
+	diff.add_theme_color_override("font_color", Color(0.9, 0.9, 0.92))
+	diff.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	diff.text = ""
 	vbox.add_child(diff)
 
 	# Tier 3: Effect description (12px, muted).
 	var eff := Label.new()
 	eff.name = "Effect_%d" % idx
-	eff.add_theme_font_size_override("font_size", 12)
-	eff.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55))
+	eff.add_theme_font_size_override("font_size", 14)
+	eff.add_theme_color_override("font_color", Color(0.72, 0.90, 1.0))
+	eff.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	eff.text = ""
 	vbox.add_child(eff)
 
@@ -1328,9 +1339,11 @@ func _handle_upgrade_phase(delta: float) -> void:
 			if qa_auto_select and not _card_input_guarded:
 				_card_input_mode = "qa_auto"
 				_select_upgrade_card(mini(qa_select_index, _upgrade_cards.size() - 1))
-			elif Input.is_key_pressed(KEY_1) and not _card_input_guarded:
-				_card_input_mode = "keyboard"
-				_select_upgrade_card(0)
+			elif not _card_input_guarded:
+				# Poll fallback for all numbered cards; edge input remains handled below.
+				if Input.is_key_pressed(KEY_1): _select_upgrade_card(0)
+				elif Input.is_key_pressed(KEY_2): _select_upgrade_card(1)
+				elif Input.is_key_pressed(KEY_3): _select_upgrade_card(2)
 		3:  # pressed — brief darken
 			_card_phase_timer -= delta
 			if _card_phase_timer <= 0.0:

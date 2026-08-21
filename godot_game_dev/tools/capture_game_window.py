@@ -78,8 +78,26 @@ def main() -> int:
     if a.dry_run:
         print(json.dumps(plan, ensure_ascii=False)); return 0
     if a.wait > 0: time.sleep(a.wait); w = select_game_window(a.pid)
-    hwnd = int(w["hwnd"]); user32.SetForegroundWindow(hwnd); user32.BringWindowToTop(hwnd); time.sleep(.15)
-    l, t, r, b = [int(v) for v in w["rect"]]; image = ImageGrab.grab(bbox=(l, t, r, b)).convert("RGB")
+    hwnd = int(w["hwnd"])
+    user32.SetForegroundWindow(hwnd)
+    user32.BringWindowToTop(hwnd)
+    time.sleep(.15)
+    # Desktop capture sees whatever is visibly on top of the rectangle. Refuse if
+    # the requested game is not foreground at the instant of capture; never risk
+    # recording a chat/private app layered over the game (2026-08-21 incident).
+    if user32.GetForegroundWindow() != hwnd:
+        user32.SetForegroundWindow(hwnd)
+        user32.BringWindowToTop(hwnd)
+        time.sleep(.25)
+        if user32.GetForegroundWindow() != hwnd:
+            raise RuntimeError("Target game window is not foreground; refusing capture to protect unrelated application content.")
+    # Re-enumerate immediately before capture: title/PID/rect must still describe
+    # the same unique game window, not a stale or replaced handle.
+    w = select_game_window(a.pid)
+    if int(w["hwnd"]) != hwnd:
+        raise RuntimeError("Target window handle changed before capture; refusing stale-window capture.")
+    l, t, r, b = [int(v) for v in w["rect"]]
+    image = ImageGrab.grab(bbox=(l, t, r, b)).convert("RGB")
     if image.size != (int(w["width"]), int(w["height"])): raise RuntimeError("Capture size does not match target window size.")
     average = image.resize((1, 1)).getpixel((0, 0)); extrema = image.getextrema()
     if all(lo == hi for lo, hi in extrema): raise RuntimeError(f"Capture is single flat color {average}; refusing evidence.")
