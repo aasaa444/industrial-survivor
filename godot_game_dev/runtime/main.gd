@@ -1778,8 +1778,8 @@ func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engin
 		b2_text += "扇裂"
 	else:
 		b2_text += "pre-fission"
-	if b2_label:
-		b2_label.text = "等级  1   经验  --"
+		# Progression HUD is owned by _update_growth_hud; the combat read model must not overwrite it.
+		# Legacy B2 phase text is diagnostic-only and intentionally not shown to the player.
 
 	# --- attack_state four states (S5 §4.3), derived ONLY from rules trace fields. ---
 	var no_target_branch: bool = bool(state.get("no_target_branch", false))
@@ -2070,7 +2070,11 @@ func _trigger_upgrade_confirmation(idx: int) -> void:
 		return
 	if _upgrade_confirm_tween:
 		_upgrade_confirm_tween.kill()
-	_upgrade_confirm_flash.position = Vector2(233.0 + idx * 160.0, 215.0)
+	var card: Dictionary = _card_nodes[idx]
+	var card_bg: TextureRect = card.bg
+	var card_rect: Rect2 = card_bg.get_global_rect() if is_instance_valid(card_bg) else Rect2(0, 0, 0, 0)
+	_upgrade_confirm_flash.position = card_rect.position
+	_upgrade_confirm_flash.size = card_rect.size
 	_upgrade_confirm_flash.visible = true
 	_upgrade_confirm_flash.color = Color(0.0, 0.90, 1.0, 0.0)
 	_upgrade_confirm_tween = create_tween()
