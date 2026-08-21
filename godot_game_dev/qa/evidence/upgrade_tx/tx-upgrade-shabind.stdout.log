@@ -1,0 +1,61 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[QA-TX] boot branch=upgrade sha=34ee88ee03060bc0781d7f9ea37288f4349ca3aa digest=commit:34ee88ee03060bc0781d7f9ea37288f4349ca3aa
+[TIMING][GRACE-END] tick=60 elapsed=1.000s; combat/session.step now permitted
+[GROWTH] energy_drop at=(1152,648) active_cores=1
+[GROWTH] energy_drop at=(1152,648) active_cores=2
+[GROWTH] energy_drop at=(1152,648) active_cores=3
+[GROWTH] energy_drop at=(1152,648) active_cores=4
+[GROWTH] energy_drop at=(1152,648) active_cores=5
+[GROWTH] energy_collected xp=5/5
+[B2-UPGRADE] window opened phase=build_choice tick=92
+[B2-UPGRADE] card selected idx=1 phase=build_choice source=qa
+[B2-UPGRADE] applied phase=fan card=2 max_targets=1 fan_arcs=3
+[B2-UPGRADE] window closed; combat resumed build=fan rank=1
+[GROWTH] energy_drop at=(1152,648) active_cores=5
+[QA-TX-ROW] {"action":"energy_core_collected_xp_once","artifact_refs":["res://qa/evidence/upgrade_tx/tx-upgrade-1787345946.jsonl"],"candidate_staged_digest":"commit:34ee88ee03060bc0781d7f9ea37288f4349ca3aa","contract_id":"upgrade_build_v1","event_refs":["[GROWTH] energy_drop","[GROWTH] energy_collected"],"evidence_boundary":"L2 runtime transaction step on the real scene; visual/user acceptance remains separate","git_sha":"34ee88ee03060bc0781d7f9ea37288f4349ca3aa","log_refs":["stdout log of this run"],"observed_at":"2026-08-21T20:59:09Z","project_root":"D:\\Game\\New_Game\\godot_game_dev","run_id":1,"schema_version":"runtime-transaction-evidence-v1","sequence":1,"state_delta":{"xp":[5,6]},"status":"passed","step_id":"trigger","tick":167,"transaction_id":"tx-upgrade-1787345946"}
+[GROWTH] energy_drop at=(1152,648) active_cores=5
+[GROWTH] energy_drop at=(1152,648) active_cores=5
+[GROWTH] energy_drop at=(1152,648) active_cores=5
+[GROWTH] energy_drop at=(1152,648) active_cores=5
+[GROWTH] energy_drop at=(1152,648) active_cores=5
+[GROWTH] energy_drop at=(1152,648) active_cores=6
+[GROWTH] energy_drop at=(1152,648) active_cores=7
+[GROWTH] energy_drop at=(1152,648) active_cores=8
+[GROWTH] energy_drop at=(1152,648) active_cores=9
+[GROWTH] energy_drop at=(1152,648) active_cores=10
+[GROWTH] energy_drop at=(1152,648) active_cores=11
+[GROWTH] energy_drop at=(1152,648) active_cores=12
+[GROWTH] energy_drop at=(1152,648) active_cores=13
+[GROWTH] energy_drop at=(1152,648) active_cores=14
+[GROWTH] energy_drop at=(1152,648) active_cores=15
+[GROWTH] energy_drop at=(1152,648) active_cores=16
+[GROWTH] energy_drop at=(1152,648) active_cores=17
+[GROWTH] energy_drop at=(1152,648) active_cores=18
+[GROWTH] energy_drop at=(1152,648) active_cores=19
+[GROWTH] energy_drop at=(1152,648) active_cores=20
+[GROWTH] energy_drop at=(1152,648) active_cores=21
+[GROWTH] energy_drop at=(1152,648) active_cores=22
+[GROWTH] energy_drop at=(1152,648) active_cores=23
+[GROWTH] energy_drop at=(1152,648) active_cores=24
+[GROWTH] energy_drop at=(1152,648) active_cores=25
+[GROWTH] energy_collected xp=10/25
+[GROWTH] energy_collected xp=15/25
+[GROWTH] energy_collected xp=20/25
+[GROWTH] energy_collected xp=25/25
+[B2-UPGRADE] window opened phase=build_upgrade tick=167
+[GROWTH] energy_collected xp=30/60
+[QA-TX-ROW] {"action":"threshold_crossing_level3_build_upgrade","artifact_refs":["res://qa/evidence/upgrade_tx/tx-upgrade-1787345946.jsonl"],"candidate_staged_digest":"commit:34ee88ee03060bc0781d7f9ea37288f4349ca3aa","contract_id":"upgrade_build_v1","event_refs":["[B2-UPGRADE] window opened phase=build_upgrade"],"evidence_boundary":"L2 runtime transaction step on the real scene; visual/user acceptance remains separate","git_sha":"34ee88ee03060bc0781d7f9ea37288f4349ca3aa","log_refs":["stdout log of this run"],"observed_at":"2026-08-21T20:59:10Z","project_root":"D:\\Game\\New_Game\\godot_game_dev","run_id":1,"schema_version":"runtime-transaction-evidence-v1","sequence":2,"state_delta":{"level":[2,3],"pending":[false,true],"phase":["","build_upgrade"]},"status":"passed","step_id":"mutate","tick":167,"transaction_id":"tx-upgrade-1787345946"}
+[QA-TX-ROW] {"action":"hud_and_single_card_reflect_state","artifact_refs":["res://qa/evidence/upgrade_tx/tx-upgrade-1787345946.jsonl"],"candidate_staged_digest":"commit:34ee88ee03060bc0781d7f9ea37288f4349ca3aa","contract_id":"upgrade_build_v1","event_refs":["growth_hud","upgrade_ui"],"evidence_boundary":"L2 runtime transaction step on the real scene; visual/user acceptance remains separate","git_sha":"34ee88ee03060bc0781d7f9ea37288f4349ca3aa","log_refs":["stdout log of this run"],"observed_at":"2026-08-21T20:59:10Z","project_root":"D:\\Game\\New_Game\\godot_game_dev","run_id":1,"schema_version":"runtime-transaction-evidence-v1","sequence":3,"state_delta":{"b2_label":"等级 3  散射扇面","visible_cards":1},"status":"passed","step_id":"read_model","tick":182,"transaction_id":"tx-upgrade-1787345946"}
+[B2-UPGRADE] card selected idx=0 phase=build_upgrade source=qa
+[B2-UPGRADE] applied phase=fan card=1 max_targets=1 fan_arcs=3
+[B2-UPGRADE] window closed; combat resumed build=fan rank=2
+[QA-TX-ROW] {"action":"choose_upgrade_0_qa_fan_rank2","artifact_refs":["res://qa/evidence/upgrade_tx/tx-upgrade-1787345946.jsonl"],"candidate_staged_digest":"commit:34ee88ee03060bc0781d7f9ea37288f4349ca3aa","contract_id":"upgrade_build_v1","event_refs":["[B2-UPGRADE] applied phase=fan"],"evidence_boundary":"L2 runtime transaction step on the real scene; visual/user acceptance remains separate","git_sha":"34ee88ee03060bc0781d7f9ea37288f4349ca3aa","log_refs":["stdout log of this run"],"observed_at":"2026-08-21T20:59:11Z","project_root":"D:\\Game\\New_Game\\godot_game_dev","run_id":1,"schema_version":"runtime-transaction-evidence-v1","sequence":4,"state_delta":{"fan_arcs_stay":3,"rank":[1,2]},"status":"passed","step_id":"behavior","tick":239,"transaction_id":"tx-upgrade-1787345946"}
+[QA-TX-ROW] {"action":"selection_and_application_each_once","artifact_refs":["res://qa/evidence/upgrade_tx/tx-upgrade-1787345946.jsonl"],"candidate_staged_digest":"commit:34ee88ee03060bc0781d7f9ea37288f4349ca3aa","contract_id":"upgrade_build_v1","event_refs":["card_confirm_sfx","upgrade_applied_sfx","upgrade_confirm_flash"],"evidence_boundary":"L2 runtime transaction step on the real scene; visual/user acceptance remains separate","git_sha":"34ee88ee03060bc0781d7f9ea37288f4349ca3aa","log_refs":["stdout log of this run"],"observed_at":"2026-08-21T20:59:11Z","project_root":"D:\\Game\\New_Game\\godot_game_dev","run_id":1,"schema_version":"runtime-transaction-evidence-v1","sequence":5,"state_delta":{"applied_sfx":true,"applied_stream":"upgrade_applied","confirm_flash":true,"confirm_sfx":true,"transitions":{"2->3":1,"3->4":1,"4->5":1,"5->0":1}},"status":"passed","step_id":"feedback","tick":239,"transaction_id":"tx-upgrade-1787345946"}
+[TERMINAL-AUTO-RESTART] canonical reset -> new run; segments_lost=0 (no cross-run loss)
+[QA-TX-ROW] {"action":"canonical_reset_state_cleared_run_identity_advanced","artifact_refs":["res://qa/evidence/upgrade_tx/tx-upgrade-1787345946.jsonl"],"candidate_staged_digest":"commit:34ee88ee03060bc0781d7f9ea37288f4349ca3aa","contract_id":"upgrade_build_v1","event_refs":["[TERMINAL-AUTO-RESTART] canonical reset"],"evidence_boundary":"L2 runtime transaction step on the real scene; visual/user acceptance remains separate","git_sha":"34ee88ee03060bc0781d7f9ea37288f4349ca3aa","log_refs":["stdout log of this run"],"observed_at":"2026-08-21T20:59:11Z","project_root":"D:\\Game\\New_Game\\godot_game_dev","run_id":2,"schema_version":"runtime-transaction-evidence-v1","sequence":6,"state_delta":{"active_build":["fan",""],"level":[3,1],"run_id":[1,2],"xp":[31,0]},"status":"passed","step_id":"reset","tick":0,"transaction_id":"tx-upgrade-1787345946"}
+[QA-TX] RESULT=passed rows=6 out=res://qa/evidence/upgrade_tx/tx-upgrade-1787345946.jsonl
+WARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 2 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)

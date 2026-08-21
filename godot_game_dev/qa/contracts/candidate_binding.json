@@ -1,0 +1,28 @@
+{
+  "schema_version": "candidate-binding-v1",
+  "candidate_git_sha": "34ee88ee03060bc0781d7f9ea37288f4349ca3aa",
+  "base_git_sha": "6f1cc76b76225a923509dfee000962ce6b981f8c",
+  "project_root": "D:\\Game\\New_Game\\godot_game_dev",
+  "godot_version": "4.7.1-stable (official)",
+  "bound_at_utc": "2026-08-22",
+  "candidate_contents": {
+    "production": ["godot_game_dev/runtime/main.gd"],
+    "contract": ["godot_game_dev/qa/contracts/upgrade_build_v1.json"],
+    "qa_driver": ["godot_game_dev/qa/qa_upgrade_transaction.gd", "godot_game_dev/qa/qa_upgrade_transaction.tscn"],
+    "evidence": [
+      "qa/evidence/upgrade_tx/tx-choice-1787345918.jsonl",
+      "qa/evidence/upgrade_tx/tx-upgrade-1787345922.jsonl",
+      "qa/evidence/upgrade_tx/tx-choice-1787345943.jsonl",
+      "qa/evidence/upgrade_tx/tx-upgrade-1787345946.jsonl"
+    ],
+    "receipt": "qa/contracts/receipts/upgrade_build_v1-34ee88e.json"
+  },
+  "historical_evidence_note": "All screenshots/logs/manifests dated before 2026-08-22 reference older SHAs (b98d996, ef33397, 852ac47, b1f2e01) and are historical evidence only; they are not valid evidence for candidate 34ee88e.",
+  "workspace_note": "User's uncommitted files (docs/production/QA_ACCEPTANCE_PLAN_v0_1.md edits, deleted qa screenshots, untracked evidence dirs, reports) were preserved unstaged and are not part of this candidate.",
+  "validation": {
+    "self_test": "exit 0 (kill->clear->contact->terminal->restart chain)",
+    "gdunit4": "60/60 passed (adapter_contract_test, rules_core_test)",
+    "runtime_transaction_verifier": "passed on both branches with git_sha binding",
+    "l1_writer_scan": "every mirror write is inside _sync_progression_read_model"
+  }
+}

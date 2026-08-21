@@ -2,6 +2,7 @@
   "schema_version": "integration-contract-v1",
   "contract_id": "upgrade_build_v1",
   "project_root": "D:\\Game\\New_Game\\godot_game_dev",
+  "git_sha": "34ee88ee03060bc0781d7f9ea37288f4349ca3aa",
   "feature": "XP-driven upgrade and build selection",
   "state_owner": {
     "name": "ProgressionController",
