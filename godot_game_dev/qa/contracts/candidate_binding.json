@@ -1,10 +1,10 @@
 {
   "schema_version": "candidate-binding-v1",
-  "candidate_git_sha": "43be64f597de82c8228e9ce0a76ba88028f6381e",
-  "base_git_sha": "4e749e8998edda0d6b90e8664c306849336c12f8",
+  "candidate_git_sha": "c61937fad7bd7b0c626b7c796827bdbddad2375f",
+  "base_git_sha": "43be64f597de82c8228e9ce0a76ba88028f6381e",
   "project_root": "D:\\Game\\New_Game\\godot_game_dev",
   "godot_version": "4.7.1-stable (official)",
-  "bound_at_utc": "2026-08-22 (pacing calibration candidate)",
+  "bound_at_utc": "2026-08-22 (XP collection fix + pickup feedback candidate)",
   "candidate_contents": {
     "production": [
       "godot_game_dev/runtime/main.gd"

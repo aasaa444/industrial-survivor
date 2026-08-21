@@ -1,0 +1,31 @@
+{
+  "schema_version": "runtime-receipt-v1",
+  "contract_id": "upgrade_build_v1",
+  "status": "passed",
+  "candidate_git_sha": "c61937fad7bd7b0c626b7c796827bdbddad2375f",
+  "project_root": "D:\\Game\\New_Game\\godot_game_dev",
+  "verified_transactions": [
+    {
+      "transaction_id": "tx-choice-1787347969",
+      "branch": "build_choice (3-card, pierce)",
+      "evidence": "qa/evidence/upgrade_tx/tx-choice-1787347969.jsonl",
+      "verifier_status": "passed",
+      "exit_code": 0
+    },
+    {
+      "transaction_id": "tx-upgrade-1787347972",
+      "branch": "build_upgrade (single-card, fan rank 2)",
+      "evidence": "qa/evidence/upgrade_tx/tx-upgrade-1787347972.jsonl",
+      "verifier_status": "passed",
+      "exit_code": 0
+    }
+  ],
+  "gate_review_basis": "staged-candidate runs tx-choice-1787347577 / tx-upgrade-1787347581 reviewed pre-commit; content identical to committed SHA (XP collection fix + pickup SFX)",
+  "additional_validation": {
+    "self_test": "exit 0",
+    "bug_fix": "per-frame XP collection (flying cores added XP every frame, ~40x inflation) moved inside the collection branch",
+    "pacing_result": "p4_six_minute_fixed.log: windows at 31.4s/58.2s/101s, xp==kills 1:1, victory at tick 21609, restart clean"
+  },
+  "reviewed_at_utc": "2026-08-22",
+  "evidence_boundary": "L2 runtime transaction only; L3 visual and user acceptance remain separate and pending"
+}
