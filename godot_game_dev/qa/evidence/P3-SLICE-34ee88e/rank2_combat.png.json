@@ -1,0 +1,34 @@
+{
+  "schema_version": "capture-window-v1",
+  "pid": 17704,
+  "title": "godot_game_dev (DEBUG)",
+  "window_rect": [
+    696,
+    345,
+    1864,
+    1032
+  ],
+  "project_root": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e",
+  "output": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e\\rank2_combat.png",
+  "scenario": "p3_slice",
+  "state": "fan_rank2_combat",
+  "action": "auto_attack",
+  "git_sha": "4250607233a91e8212d93aec28440ecd56062326",
+  "will_mutate_project": false,
+  "captured_at_utc": "2026-08-21T21:08:39.891253+00:00",
+  "image_size": [
+    1168,
+    687
+  ],
+  "average_rgb": [
+    67,
+    56,
+    46
+  ],
+  "sha256": "bcafb8f9278ea6dc285f8bf44ec567a56548be61e8de3113f299c71e0ec9c6db",
+  "capture_route": "native_window_diagnostic",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "python": "3.14.0",
+  "pillow": "12.1.0",
+  "evidence_boundary": "visible pixels/window identity only; runtime domain state unproven"
+}

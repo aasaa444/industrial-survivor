@@ -1,0 +1,82 @@
+{
+  "schema_version": "p3-slice-record-v1",
+  "steps": [
+    {
+      "step": "first_screen_3s",
+      "desc": "first screen readability at 3s",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e\\first_screen_3s.png",
+      "sha256": "8e04725a888f11d30bd31c0cf923d0dceec728945c1313e6c7cc74846e01b40c"
+    },
+    {
+      "step": "movement_feedback",
+      "desc": "world scroll after real WASD holds",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e\\movement_feedback.png",
+      "sha256": "a2142afddb5e58c2aeb868fa579447d5c8524f142694fa535f8771c6f545ddcb"
+    },
+    {
+      "step": "build_choice_open",
+      "log": "window opened phase=build_choice tick=656"
+    },
+    {
+      "step": "build_choice_3cards",
+      "desc": "3-card build choice window",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e\\build_choice_3cards.png",
+      "sha256": "249b106a97ecbac8bb3357bfb39d7682b4e63118135aa48f6ba609c96d0354f2"
+    },
+    {
+      "step": "real_keyboard_select_2",
+      "log": "card selected idx=1 phase=build_choice source=keyboard"
+    },
+    {
+      "step": "build_choice_selected",
+      "desc": "selection feedback (pressed/acquired)",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e\\build_choice_selected.png",
+      "sha256": "09d58cf02883ef45d30c539334a0c8cf2f7ca431ab4de61fd1bd6a9fcbedd9ce"
+    },
+    {
+      "step": "combat_with_fan",
+      "desc": "combat with fan build active",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e\\combat_with_fan.png",
+      "sha256": "1dfce5a8f1f524852429cbe5e03d913456c920f6544275fbe9139e100ea77c3d"
+    },
+    {
+      "step": "build_upgrade_open",
+      "log": "window opened phase=build_upgrade tick=819"
+    },
+    {
+      "step": "build_upgrade_1card",
+      "desc": "single-card rank upgrade window",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e\\build_upgrade_1card.png",
+      "sha256": "1dfce5a8f1f524852429cbe5e03d913456c920f6544275fbe9139e100ea77c3d"
+    },
+    {
+      "step": "real_keyboard_select_1",
+      "log": "card selected idx=0 phase=build_upgrade source=keyboard"
+    },
+    {
+      "step": "rank2_combat",
+      "desc": "combat after rank 2 upgrade",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e\\rank2_combat.png",
+      "sha256": "bcafb8f9278ea6dc285f8bf44ec567a56548be61e8de3113f299c71e0ec9c6db"
+    },
+    {
+      "step": "pause_overlay",
+      "desc": "ESC pause overlay",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e\\pause_overlay.png",
+      "sha256": "6becdb3cd123c6550800a6826fe5a0ee28557d97542ee23bc78a2e0c2c94d645"
+    },
+    {
+      "step": "real_r_restart",
+      "log": "TERMINAL-AUTO-RESTART] canonical reset -> new run; segments_lost=0 (no cross-run loss)"
+    },
+    {
+      "step": "restarted_clean",
+      "desc": "fresh run after R restart",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e\\restarted_clean.png",
+      "sha256": "88ceb2dae1149651f5762b42d016b66573034ff252f32da6b8d051dc309cda82"
+    }
+  ],
+  "status": "passed",
+  "game_pid": 29472,
+  "window_title": "godot_game_dev (DEBUG)"
+}

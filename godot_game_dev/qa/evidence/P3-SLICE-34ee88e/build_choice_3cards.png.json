@@ -1,0 +1,34 @@
+{
+  "schema_version": "capture-window-v1",
+  "pid": 17704,
+  "title": "godot_game_dev (DEBUG)",
+  "window_rect": [
+    696,
+    345,
+    1864,
+    1032
+  ],
+  "project_root": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e",
+  "output": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P3-SLICE-34ee88e\\build_choice_3cards.png",
+  "scenario": "p3_slice",
+  "state": "build_choice_inspection",
+  "action": "await_real_key",
+  "git_sha": "4250607233a91e8212d93aec28440ecd56062326",
+  "will_mutate_project": false,
+  "captured_at_utc": "2026-08-21T21:08:34.173317+00:00",
+  "image_size": [
+    1168,
+    687
+  ],
+  "average_rgb": [
+    75,
+    64,
+    52
+  ],
+  "sha256": "249b106a97ecbac8bb3357bfb39d7682b4e63118135aa48f6ba609c96d0354f2",
+  "capture_route": "native_window_diagnostic",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "python": "3.14.0",
+  "pillow": "12.1.0",
+  "evidence_boundary": "visible pixels/window identity only; runtime domain state unproven"
+}
