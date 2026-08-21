@@ -699,7 +699,7 @@ func _build_visuals(for_self_test: bool) -> void:
 
 	objective_label = Label.new()
 	objective_label.position = Vector2(16, 84)
-	objective_label.text = "目标  WASD / 方向键移动，自动攻击"
+	objective_label.text = "目标  存活到 06:00  ·  WASD / 方向键移动，自动攻击"
 	objective_label.add_theme_color_override("font_color", Color(0.86, 0.86, 0.82))
 	hud.add_child(objective_label)
 
@@ -1952,7 +1952,8 @@ func _present_read_model(state: Dictionary, fb: Dictionary, events: Array, engin
 		life_label.text = "生命  " + life_text.substr(5, 11)
 	# timer: current_tick (SESSION) + run_duration_bound opaque (value deferred to Systems; not promoted).
 	if timer_label:
-		timer_label.text = "时间  %02d:%02d" % [int(session.current_tick() / 60), int(session.current_tick()) % 60]
+		var remaining_ticks: int = max(0, run_duration_ticks - session.current_tick())
+		timer_label.text = "剩余  %02d:%02d" % [int(remaining_ticks / 60), int(remaining_ticks) % 60]
 	# b2: show current B2 phase (read from rules state).
 	var b2_phase: String = String(state.get("b2_phase", "pre"))
 	var b2_text: String = "B2: "
