@@ -1296,7 +1296,11 @@ func _handle_upgrade_phase(delta: float) -> void:
 				_card_input_guarded = false
 				_update_card_visuals()
 		2:  # inspection — input handled by _unhandled_input and mouse signals
-			pass
+			# Fallback for window/input backends that drop edge events: the current Slice B
+			# has one card, so a physical 1 press remains unambiguous and guarded.
+			if Input.is_key_pressed(KEY_1) and not _card_input_guarded:
+				_card_input_mode = "keyboard"
+				_select_upgrade_card(0)
 		3:  # pressed — brief darken
 			_card_phase_timer -= delta
 			if _card_phase_timer <= 0.0:
