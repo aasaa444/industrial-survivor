@@ -154,6 +154,7 @@ var kinetic_pulse_active: bool = false
 var active_build: String = ""
 var build_rank: int = 0
 var run_kills: int = 0
+var counted_kill_ids: Dictionary = {}
 var _paused: bool = false
 var _pause_layer: CanvasLayer
 var _pause_title: Label
@@ -991,6 +992,7 @@ func _auto_restart() -> void:
 	active_build = ""
 	build_rank = 0
 	run_kills = 0
+	counted_kill_ids.clear()
 	rail_pierce_active = false
 	for core in energy_cores:
 		if is_instance_valid(core.node): core.node.visible = false
@@ -2388,10 +2390,14 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 				_enemy_death_sfx_player.play()
 		dbg_verbose("[FB-BIND] kill=%s (emitted only while kill_outcomes non-empty)" % str(fb["kill"]))
 		for kid in fb["kill"]:
+			var kid_id: int = int(kid)
+			if counted_kill_ids.has(kid_id):
+				continue
+			counted_kill_ids[kid_id] = true
 			run_kills += 1
-			dbg_verbose("[KILL] id=%d died -> kill tween (scale+fade)" % kid)
+			dbg_verbose("[KILL] id=%d died -> kill tween (scale+fade)" % kid_id)
 			for e in on_screen:
-				if e.stable_id == kid and is_instance_valid(e.node):
+				if e.stable_id == kid_id and is_instance_valid(e.node):
 					# Death -> energy core drop (Slice B reward loop).
 					if not self_test_mode and is_instance_valid(e.node):
 						_spawn_energy_core(e.node.position)
@@ -2405,7 +2411,7 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 					enemies.erase(e)
 					break
 			_emit_clear_effect()
-			dbg_verbose("[CLEAR] enemy id=%d cleared from play" % kid)
+			dbg_verbose("[CLEAR] enemy id=%d cleared from play" % kid_id)
 	if not fb["kill"].is_empty():
 		var remaining: int = 0
 		for e in on_screen:
