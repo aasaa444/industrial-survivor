@@ -1665,8 +1665,8 @@ func _process(delta: float) -> void:
 		var pulse_hit: bool = false
 		for e in on_screen:
 			var pulse_dist: float = e.node.position.distance_to(position)
-				if pulse_dist < (150.0 + build_rank * 35.0) and pulse_dist > 1.0:
-					e.node.position += (e.node.position - position).normalized() * (90.0 + build_rank * 25.0) * delta
+			if pulse_dist < (150.0 + build_rank * 35.0) and pulse_dist > 1.0:
+				e.node.position += (e.node.position - position).normalized() * (90.0 + build_rank * 25.0) * delta
 				pulse_hit = true
 		if pulse_hit:
 			_pulse_flash_remaining = 0.18
