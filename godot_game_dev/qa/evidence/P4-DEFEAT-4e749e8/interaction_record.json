@@ -1,0 +1,8 @@
+{
+  "schema_version": "p4-defeat-record-v1",
+  "status": "passed",
+  "defeat_reached": true,
+  "result_capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P4-DEFEAT-4e749e8\\defeat_result.png",
+  "restart_marker": "TERMINAL-AUTO-RESTART] canonical reset -> new run; segments_lost=0 (no cross-run loss)",
+  "restart_capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P4-DEFEAT-4e749e8\\restart_fresh_hud.png"
+}

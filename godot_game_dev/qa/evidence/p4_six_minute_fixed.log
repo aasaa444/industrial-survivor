@@ -1,0 +1,831 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[SIX-MIN] start sha=a100dd7140286755127cda0cf80a484bad6f75f0-staged-8ba4d26a4d3ab43aab76bbb7216ec6337cf093fabff46cd75d09399071e0cc06 select=1
+[TIMING][GRACE-END] tick=60 elapsed=1.000s; combat/session.step now permitted
+[WAVE] wave=1 live_after=2
+[PERF] nodes=76 alive=2 dict=2 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=2 live_after=4
+[PERF] nodes=80 alive=4 dict=4 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1254,895) active_cores=1
+[GROWTH] energy_drop at=(1243,860) active_cores=1
+[PERF] nodes=77 alive=2 dict=2 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=3 live_after=8
+[GROWTH] energy_drop at=(1210,416) active_cores=1
+[PERF] nodes=87 alive=7 dict=7 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1385,594) active_cores=1
+[WAVE] wave=4 live_after=13
+[PERF] nodes=99 alive=13 dict=13 fps=143 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1040,437) active_cores=1
+[GROWTH] energy_collected xp=5/10
+[GROWTH] energy_drop at=(951,517) active_cores=1
+[GROWTH] energy_drop at=(957,609) active_cores=1
+[GROWTH] energy_drop at=(1246,521) active_cores=1
+[PERF] nodes=91 alive=9 dict=9 fps=142 draw_calls=0 rs_obj=0 script_ms=0.01
+[SIX-MIN] t=30s tick=1807 alive=9 peak=13 fps=142 level=1 xp=8 kills=8 build= rank=0
+[GROWTH] energy_drop at=(1076,738) active_cores=1
+[WAVE] wave=5 live_after=17
+[GROWTH] energy_drop at=(1221,682) active_cores=1
+[GROWTH] energy_collected xp=10/10
+[B2-UPGRADE] window opened phase=build_choice tick=1881
+[B2-UPGRADE] card selected idx=1 phase=build_choice source=qa
+[B2-UPGRADE] applied phase=fan card=2 max_targets=1 fan_arcs=3
+[B2-UPGRADE] window closed; combat resumed build=fan rank=1
+[GROWTH] energy_drop at=(1165,409) active_cores=1
+[GROWTH] energy_drop at=(1117,406) active_cores=2
+[PERF] nodes=102 alive=14 dict=14 fps=145 draw_calls=0 rs_obj=0 script_ms=0.02
+[GROWTH] energy_drop at=(1391,633) active_cores=2
+[GROWTH] energy_drop at=(941,535) active_cores=2
+[GROWTH] energy_drop at=(928,564) active_cores=3
+[GROWTH] energy_drop at=(913,648) active_cores=4
+[GROWTH] energy_collected xp=15/45
+[GROWTH] energy_drop at=(954,666) active_cores=4
+[WAVE] wave=6 live_after=19
+[PERF] nodes=114 alive=19 dict=19 fps=143 draw_calls=0 rs_obj=0 script_ms=0.03
+[GROWTH] energy_drop at=(1264,437) active_cores=4
+[GROWTH] energy_drop at=(1301,460) active_cores=4
+[GROWTH] energy_drop at=(1292,454) active_cores=4
+[GROWTH] energy_drop at=(1388,609) active_cores=4
+[GROWTH] energy_drop at=(1358,771) active_cores=4
+[GROWTH] energy_collected xp=20/45
+[GROWTH] energy_drop at=(1316,760) active_cores=4
+[GROWTH] energy_drop at=(1283,798) active_cores=4
+[GROWTH] energy_drop at=(1010,787) active_cores=4
+[GROWTH] energy_collected xp=25/45
+[PERF] nodes=98 alive=11 dict=11 fps=138 draw_calls=0 rs_obj=0 script_ms=0.03
+[WAVE] wave=7 live_after=22
+[GROWTH] energy_drop at=(1150,409) active_cores=4
+[GROWTH] energy_drop at=(1179,406) active_cores=4
+[GROWTH] energy_drop at=(1074,392) active_cores=4
+[GROWTH] energy_drop at=(1227,427) active_cores=4
+[GROWTH] energy_drop at=(1054,416) active_cores=4
+[GROWTH] energy_collected xp=30/45
+[GROWTH] energy_drop at=(1037,858) active_cores=4
+[GROWTH] energy_drop at=(1381,580) active_cores=4
+[GROWTH] energy_drop at=(1391,658) active_cores=4
+[GROWTH] energy_drop at=(1355,775) active_cores=4
+[PERF] nodes=132 alive=13 dict=13 fps=143 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(915,748) active_cores=4
+[GROWTH] energy_collected xp=35/45
+[WAVE] wave=8 live_after=25
+[GROWTH] energy_drop at=(1208,885) active_cores=4
+[GROWTH] energy_drop at=(1217,888) active_cores=4
+[PERF] nodes=122 alive=23 dict=23 fps=141 draw_calls=0 rs_obj=0 script_ms=0.03
+[GROWTH] energy_drop at=(1267,438) active_cores=4
+[GROWTH] energy_drop at=(1030,434) active_cores=4
+[GROWTH] energy_drop at=(1362,763) active_cores=4
+[GROWTH] energy_drop at=(1388,685) active_cores=4
+[GROWTH] energy_drop at=(1389,680) active_cores=4
+[GROWTH] energy_drop at=(1391,630) active_cores=4
+[GROWTH] energy_collected xp=40/45
+[GROWTH] energy_drop at=(1335,572) active_cores=4
+[GROWTH] energy_drop at=(970,568) active_cores=4
+[GROWTH] energy_drop at=(947,533) active_cores=4
+[GROWTH] energy_collected xp=45/45
+[B2-UPGRADE] window opened phase=build_upgrade tick=3491
+[B2-UPGRADE] card selected idx=0 phase=build_upgrade source=qa
+[B2-UPGRADE] applied phase=fan card=1 max_targets=1 fan_arcs=3
+[B2-UPGRADE] window closed; combat resumed build=fan rank=2
+[PERF] nodes=104 alive=14 dict=14 fps=140 draw_calls=0 rs_obj=0 script_ms=0.01
+[SIX-MIN] t=60s tick=3614 alive=14 peak=25 fps=140 level=3 xp=46 kills=46 build=fan rank=2
+[WAVE] wave=9 live_after=26
+[GROWTH] energy_drop at=(1175,888) active_cores=4
+[GROWTH] energy_drop at=(1177,889) active_cores=4
+[GROWTH] energy_drop at=(1067,873) active_cores=4
+[GROWTH] energy_drop at=(1062,876) active_cores=4
+[GROWTH] energy_collected xp=50/120
+[PERF] nodes=120 alive=22 dict=22 fps=145 draw_calls=0 rs_obj=0 script_ms=0.03
+[GROWTH] energy_drop at=(963,795) active_cores=4
+[GROWTH] energy_drop at=(925,571) active_cores=4
+[GROWTH] energy_drop at=(1331,807) active_cores=4
+[GROWTH] energy_drop at=(1346,789) active_cores=4
+[GROWTH] energy_drop at=(1299,459) active_cores=5
+[GROWTH] energy_collected xp=55/120
+[GROWTH] energy_drop at=(1297,512) active_cores=5
+[GROWTH] energy_drop at=(1331,562) active_cores=5
+[GROWTH] energy_drop at=(1291,458) active_cores=5
+[WAVE] wave=10 live_after=26
+[GROWTH] energy_drop at=(1107,886) active_cores=5
+[GROWTH] energy_drop at=(1098,888) active_cores=5
+[GROWTH] energy_drop at=(1069,899) active_cores=5
+[GROWTH] energy_collected xp=60/120
+[PERF] nodes=123 alive=23 dict=23 fps=137 draw_calls=0 rs_obj=0 script_ms=0.02
+[GROWTH] energy_drop at=(1053,430) active_cores=5
+[GROWTH] energy_drop at=(1026,416) active_cores=5
+[GROWTH] energy_drop at=(1288,417) active_cores=5
+[GROWTH] energy_drop at=(1029,854) active_cores=5
+[GROWTH] energy_drop at=(1277,441) active_cores=5
+[GROWTH] energy_collected xp=65/120
+[GROWTH] energy_drop at=(1301,820) active_cores=5
+[GROWTH] energy_drop at=(1295,471) active_cores=5
+[GROWTH] energy_drop at=(1023,836) active_cores=5
+[GROWTH] energy_drop at=(956,764) active_cores=5
+[GROWTH] energy_drop at=(937,573) active_cores=5
+[GROWTH] energy_collected xp=70/120
+[GROWTH] energy_drop at=(953,762) active_cores=5
+[PERF] nodes=101 alive=12 dict=12 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=11 live_after=26
+[GROWTH] energy_drop at=(1151,888) active_cores=5
+[GROWTH] energy_drop at=(1192,893) active_cores=5
+[GROWTH] energy_drop at=(1061,869) active_cores=5
+[GROWTH] energy_collected xp=75/120
+[GROWTH] energy_drop at=(1045,445) active_cores=5
+[GROWTH] energy_drop at=(1296,872) active_cores=5
+[GROWTH] energy_drop at=(1390,660) active_cores=5
+[GROWTH] energy_drop at=(1305,831) active_cores=5
+[GROWTH] energy_drop at=(1379,575) active_cores=5
+[GROWTH] energy_drop at=(1331,491) active_cores=5
+[GROWTH] energy_drop at=(1328,487) active_cores=5
+[GROWTH] energy_collected xp=80/120
+[GROWTH] energy_drop at=(996,526) active_cores=5
+[GROWTH] energy_drop at=(1009,512) active_cores=5
+[PERF] nodes=123 alive=14 dict=14 fps=131 draw_calls=0 rs_obj=0 script_ms=0.02
+[WAVE] wave=12 live_after=26
+[GROWTH] energy_drop at=(1133,886) active_cores=5
+[GROWTH] energy_drop at=(1116,890) active_cores=5
+[GROWTH] energy_drop at=(1209,895) active_cores=5
+[GROWTH] energy_drop at=(1085,898) active_cores=5
+[GROWTH] energy_collected xp=85/120
+[GROWTH] energy_drop at=(1239,423) active_cores=5
+[GROWTH] energy_drop at=(1053,879) active_cores=5
+[GROWTH] energy_collected xp=90/120
+[PERF] nodes=117 alive=20 dict=20 fps=141 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1390,622) active_cores=5
+[GROWTH] energy_drop at=(1323,481) active_cores=5
+[GROWTH] energy_drop at=(1317,475) active_cores=5
+[GROWTH] energy_drop at=(1297,457) active_cores=5
+[GROWTH] energy_drop at=(1376,732) active_cores=5
+[GROWTH] energy_collected xp=95/120
+[GROWTH] energy_drop at=(1336,722) active_cores=5
+[GROWTH] energy_drop at=(1035,809) active_cores=5
+[GROWTH] energy_drop at=(953,652) active_cores=5
+[WAVE] wave=13 live_after=26
+[PERF] nodes=129 alive=26 dict=26 fps=142 draw_calls=0 rs_obj=0 script_ms=0.02
+[SIX-MIN] t=90s tick=5420 alive=26 peak=26 fps=142 level=3 xp=98 kills=98 build=fan rank=2
+[GROWTH] energy_drop at=(1180,410) active_cores=5
+[GROWTH] energy_drop at=(1233,428) active_cores=5
+[GROWTH] energy_collected xp=100/120
+[GROWTH] energy_drop at=(1309,829) active_cores=5
+[GROWTH] energy_drop at=(1378,727) active_cores=5
+[GROWTH] energy_drop at=(1381,716) active_cores=5
+[GROWTH] energy_drop at=(995,828) active_cores=5
+[GROWTH] energy_drop at=(944,766) active_cores=5
+[GROWTH] energy_collected xp=105/120
+[GROWTH] energy_drop at=(967,721) active_cores=5
+[GROWTH] energy_drop at=(1314,533) active_cores=5
+[GROWTH] energy_drop at=(1315,534) active_cores=5
+[GROWTH] energy_drop at=(1295,510) active_cores=5
+[GROWTH] energy_drop at=(1007,512) active_cores=5
+[GROWTH] energy_collected xp=110/120
+[PERF] nodes=105 alive=14 dict=14 fps=130 draw_calls=0 rs_obj=0 script_ms=0.02
+[WAVE] wave=14 live_after=26
+[GROWTH] energy_drop at=(1109,883) active_cores=5
+[GROWTH] energy_drop at=(1024,850) active_cores=5
+[GROWTH] energy_drop at=(1017,442) active_cores=5
+[GROWTH] energy_drop at=(1358,498) active_cores=5
+[GROWTH] energy_drop at=(1350,487) active_cores=5
+[GROWTH] energy_drop at=(1331,466) active_cores=5
+[PERF] nodes=132 alive=20 dict=20 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_collected xp=115/120
+[GROWTH] energy_drop at=(1303,799) active_cores=5
+[GROWTH] energy_drop at=(1294,808) active_cores=5
+[GROWTH] energy_drop at=(1288,813) active_cores=5
+[GROWTH] energy_drop at=(1275,823) active_cores=5
+[GROWTH] energy_drop at=(971,762) active_cores=5
+[GROWTH] energy_collected xp=120/120
+[B2-UPGRADE] window opened phase=build_upgrade tick=6062
+[B2-UPGRADE] card selected idx=0 phase=build_upgrade source=qa
+[B2-UPGRADE] applied phase=fan card=1 max_targets=1 fan_arcs=3
+[B2-UPGRADE] window closed; combat resumed build=fan rank=3
+[GROWTH] energy_drop at=(983,554) active_cores=5
+[GROWTH] energy_drop at=(979,633) active_cores=5
+[GROWTH] energy_drop at=(979,643) active_cores=5
+[WAVE] wave=15 live_after=26
+[PERF] nodes=129 alive=26 dict=26 fps=142 draw_calls=0 rs_obj=0 script_ms=0.02
+[GROWTH] energy_drop at=(1145,409) active_cores=5
+[GROWTH] energy_drop at=(1167,408) active_cores=5
+[GROWTH] energy_drop at=(1193,404) active_cores=5
+[GROWTH] energy_drop at=(1251,430) active_cores=5
+[GROWTH] energy_drop at=(1001,834) active_cores=5
+[GROWTH] energy_drop at=(915,682) active_cores=5
+[GROWTH] energy_drop at=(914,623) active_cores=5
+[GROWTH] energy_drop at=(1340,796) active_cores=5
+[GROWTH] energy_drop at=(1343,791) active_cores=5
+[GROWTH] energy_drop at=(1350,782) active_cores=6
+[GROWTH] energy_collected xp=130/MAX
+[GROWTH] energy_drop at=(1347,684) active_cores=6
+[GROWTH] energy_drop at=(1270,488) active_cores=6
+[PERF] nodes=106 alive=14 dict=14 fps=138 draw_calls=0 rs_obj=0 script_ms=0.02
+[WAVE] wave=16 live_after=26
+[GROWTH] energy_drop at=(1240,425) active_cores=6
+[GROWTH] energy_drop at=(1048,852) active_cores=6
+[GROWTH] energy_drop at=(1257,852) active_cores=6
+[GROWTH] energy_drop at=(1040,440) active_cores=6
+[GROWTH] energy_drop at=(1036,859) active_cores=6
+[GROWTH] energy_collected xp=140/MAX
+[PERF] nodes=120 alive=21 dict=21 fps=135 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(914,600) active_cores=6
+[GROWTH] energy_drop at=(912,612) active_cores=6
+[GROWTH] energy_drop at=(918,712) active_cores=6
+[GROWTH] energy_drop at=(922,724) active_cores=6
+[GROWTH] energy_drop at=(947,778) active_cores=6
+[GROWTH] energy_drop at=(969,808) active_cores=6
+[GROWTH] energy_drop at=(1343,584) active_cores=6
+[GROWTH] energy_drop at=(1347,699) active_cores=6
+[GROWTH] energy_drop at=(1025,805) active_cores=6
+[GROWTH] energy_collected xp=150/MAX
+[WAVE] wave=17 live_after=26
+[GROWTH] energy_drop at=(1139,409) active_cores=6
+[GROWTH] energy_drop at=(1130,408) active_cores=6
+[GROWTH] energy_drop at=(1078,902) active_cores=6
+[PERF] nodes=124 alive=23 dict=23 fps=138 draw_calls=0 rs_obj=0 script_ms=0.01
+[SIX-MIN] t=120s tick=7227 alive=23 peak=26 fps=138 level=4 xp=153 kills=153 build=fan rank=3
+[GROWTH] energy_drop at=(1020,448) active_cores=6
+[GROWTH] energy_drop at=(906,659) active_cores=6
+[GROWTH] energy_drop at=(931,539) active_cores=6
+[GROWTH] energy_drop at=(933,535) active_cores=6
+[GROWTH] energy_drop at=(1370,763) active_cores=6
+[GROWTH] energy_drop at=(1382,738) active_cores=6
+[GROWTH] energy_drop at=(1351,702) active_cores=6
+[GROWTH] energy_drop at=(1356,624) active_cores=6
+[GROWTH] energy_drop at=(1318,526) active_cores=6
+[GROWTH] energy_collected xp=160/MAX
+[PERF] nodes=106 alive=14 dict=14 fps=145 draw_calls=0 rs_obj=0 script_ms=0.02
+[WAVE] wave=18 live_after=26
+[GROWTH] energy_drop at=(1160,409) active_cores=6
+[GROWTH] energy_drop at=(1174,889) active_cores=6
+[GROWTH] energy_drop at=(1109,893) active_cores=6
+[GROWTH] energy_drop at=(1259,433) active_cores=6
+[GROWTH] energy_drop at=(1027,872) active_cores=6
+[GROWTH] energy_drop at=(1035,845) active_cores=6
+[GROWTH] energy_drop at=(901,704) active_cores=6
+[GROWTH] energy_drop at=(895,654) active_cores=6
+[GROWTH] energy_drop at=(936,789) active_cores=6
+[GROWTH] energy_drop at=(979,839) active_cores=6
+[GROWTH] energy_drop at=(983,842) active_cores=6
+[GROWTH] energy_collected xp=170/MAX
+[GROWTH] energy_drop at=(1021,475) active_cores=6
+[GROWTH] energy_drop at=(1356,721) active_cores=6
+[GROWTH] energy_drop at=(1361,706) active_cores=6
+[PERF] nodes=102 alive=12 dict=12 fps=127 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=19 live_after=26
+[GROWTH] energy_drop at=(1150,409) active_cores=6
+[GROWTH] energy_drop at=(1161,408) active_cores=6
+[GROWTH] energy_drop at=(1101,895) active_cores=6
+[GROWTH] energy_drop at=(1233,872) active_cores=6
+[GROWTH] energy_drop at=(1070,423) active_cores=6
+[GROWTH] energy_collected xp=180/MAX
+[PERF] nodes=120 alive=21 dict=21 fps=141 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1039,859) active_cores=6
+[GROWTH] energy_drop at=(941,535) active_cores=6
+[GROWTH] energy_drop at=(927,568) active_cores=6
+[GROWTH] energy_drop at=(913,648) active_cores=6
+[GROWTH] energy_drop at=(917,692) active_cores=6
+[GROWTH] energy_drop at=(937,752) active_cores=6
+[GROWTH] energy_drop at=(1391,657) active_cores=6
+[WAVE] wave=20 live_after=26
+[PERF] nodes=130 alive=26 dict=26 fps=142 draw_calls=0 rs_obj=0 script_ms=0.03
+[GROWTH] energy_drop at=(1129,409) active_cores=6
+[GROWTH] energy_drop at=(1131,886) active_cores=6
+[GROWTH] energy_drop at=(1116,407) active_cores=6
+[GROWTH] energy_drop at=(1078,900) active_cores=6
+[GROWTH] energy_collected xp=190/MAX
+[GROWTH] energy_drop at=(1069,425) active_cores=6
+[GROWTH] energy_drop at=(1272,441) active_cores=6
+[GROWTH] energy_drop at=(1346,520) active_cores=6
+[GROWTH] energy_drop at=(1385,652) active_cores=6
+[GROWTH] energy_drop at=(1288,459) active_cores=6
+[GROWTH] energy_drop at=(1377,706) active_cores=6
+[GROWTH] energy_drop at=(1358,756) active_cores=6
+[GROWTH] energy_drop at=(971,794) active_cores=6
+[GROWTH] energy_collected xp=200/MAX
+[GROWTH] energy_drop at=(964,687) active_cores=6
+[GROWTH] energy_drop at=(1003,769) active_cores=6
+[PERF] nodes=102 alive=12 dict=12 fps=139 draw_calls=0 rs_obj=0 script_ms=0.02
+[WAVE] wave=21 live_after=26
+[GROWTH] energy_drop at=(1138,409) active_cores=6
+[GROWTH] energy_drop at=(1222,396) active_cores=6
+[GROWTH] energy_drop at=(1020,448) active_cores=6
+[GROWTH] energy_drop at=(1017,850) active_cores=6
+[GROWTH] energy_drop at=(1300,450) active_cores=6
+[GROWTH] energy_drop at=(1293,445) active_cores=6
+[GROWTH] energy_drop at=(1395,604) active_cores=6
+[GROWTH] energy_drop at=(1397,614) active_cores=6
+[PERF] nodes=168 alive=18 dict=18 fps=145 draw_calls=0 rs_obj=0 script_ms=0.02
+[GROWTH] energy_collected xp=210/MAX
+[SIX-MIN] t=151s tick=9042 alive=18 peak=26 fps=124 level=4 xp=210 kills=210 build=fan rank=3
+[GROWTH] energy_drop at=(1355,685) active_cores=6
+[GROWTH] energy_drop at=(1350,705) active_cores=6
+[GROWTH] energy_drop at=(1350,705) active_cores=6
+[GROWTH] energy_drop at=(978,758) active_cores=6
+[WAVE] wave=22 live_after=26
+[GROWTH] energy_drop at=(1105,414) active_cores=6
+[GROWTH] energy_drop at=(1224,891) active_cores=6
+[PERF] nodes=126 alive=24 dict=24 fps=144 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1277,852) active_cores=6
+[GROWTH] energy_drop at=(1354,816) active_cores=6
+[GROWTH] energy_drop at=(1380,780) active_cores=6
+[GROWTH] energy_drop at=(889,653) active_cores=6
+[GROWTH] energy_drop at=(1413,684) active_cores=6
+[GROWTH] energy_drop at=(1415,663) active_cores=6
+[GROWTH] energy_collected xp=220/MAX
+[GROWTH] energy_drop at=(953,548) active_cores=6
+[GROWTH] energy_drop at=(958,538) active_cores=6
+[GROWTH] energy_drop at=(971,519) active_cores=6
+[GROWTH] energy_drop at=(979,508) active_cores=6
+[GROWTH] energy_drop at=(994,491) active_cores=6
+[GROWTH] energy_drop at=(1336,522) active_cores=6
+[PERF] nodes=102 alive=12 dict=12 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=23 live_after=26
+[GROWTH] energy_drop at=(1157,887) active_cores=6
+[GROWTH] energy_drop at=(1082,901) active_cores=6
+[GROWTH] energy_drop at=(1077,903) active_cores=6
+[GROWTH] energy_collected xp=230/MAX
+[GROWTH] energy_drop at=(1041,860) active_cores=6
+[GROWTH] energy_drop at=(1286,872) active_cores=6
+[GROWTH] energy_drop at=(1029,844) active_cores=6
+[GROWTH] energy_drop at=(1026,845) active_cores=6
+[GROWTH] energy_drop at=(1281,847) active_cores=6
+[GROWTH] energy_drop at=(1399,618) active_cores=6
+[GROWTH] energy_drop at=(915,725) active_cores=6
+[GROWTH] energy_drop at=(1296,445) active_cores=6
+[GROWTH] energy_drop at=(1023,485) active_cores=6
+[PERF] nodes=106 alive=14 dict=14 fps=125 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_collected xp=240/MAX
+[WAVE] wave=24 live_after=26
+[GROWTH] energy_drop at=(1099,415) active_cores=6
+[GROWTH] energy_drop at=(1084,887) active_cores=6
+[GROWTH] energy_drop at=(1041,860) active_cores=6
+[GROWTH] energy_drop at=(1021,871) active_cores=6
+[GROWTH] energy_drop at=(1291,875) active_cores=6
+[PERF] nodes=147 alive=21 dict=21 fps=141 draw_calls=0 rs_obj=0 script_ms=0.02
+[GROWTH] energy_drop at=(1321,479) active_cores=6
+[GROWTH] energy_drop at=(1375,561) active_cores=6
+[GROWTH] energy_drop at=(1376,564) active_cores=6
+[GROWTH] energy_drop at=(963,501) active_cores=6
+[GROWTH] energy_drop at=(923,579) active_cores=6
+[GROWTH] energy_drop at=(914,626) active_cores=6
+[GROWTH] energy_collected xp=250/MAX
+[GROWTH] energy_drop at=(1285,795) active_cores=6
+[GROWTH] energy_drop at=(1284,796) active_cores=6
+[GROWTH] energy_drop at=(1271,806) active_cores=6
+[WAVE] wave=25 live_after=26
+[PERF] nodes=130 alive=26 dict=26 fps=143 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1186,411) active_cores=6
+[GROWTH] energy_drop at=(1264,436) active_cores=6
+[GROWTH] energy_drop at=(1028,452) active_cores=6
+[GROWTH] energy_drop at=(931,536) active_cores=6
+[GROWTH] energy_drop at=(960,491) active_cores=6
+[GROWTH] energy_drop at=(965,485) active_cores=6
+[GROWTH] energy_drop at=(1005,448) active_cores=6
+[GROWTH] energy_drop at=(1335,480) active_cores=6
+[GROWTH] energy_collected xp=260/MAX
+[GROWTH] energy_drop at=(1310,783) active_cores=6
+[GROWTH] energy_drop at=(1337,743) active_cores=6
+[GROWTH] energy_drop at=(1345,725) active_cores=6
+[GROWTH] energy_drop at=(1345,570) active_cores=6
+[PERF] nodes=106 alive=14 dict=14 fps=135 draw_calls=0 rs_obj=0 script_ms=0.01
+[SIX-MIN] t=181s tick=10848 alive=14 peak=26 fps=143 level=4 xp=266 kills=266 build=fan rank=3
+[WAVE] wave=26 live_after=26
+[GROWTH] energy_drop at=(1170,887) active_cores=6
+[GROWTH] energy_drop at=(1085,397) active_cores=6
+[GROWTH] energy_drop at=(1224,901) active_cores=6
+[GROWTH] energy_drop at=(1069,424) active_cores=6
+[GROWTH] energy_drop at=(1066,873) active_cores=6
+[GROWTH] energy_collected xp=270/MAX
+[GROWTH] energy_drop at=(913,655) active_cores=6
+[GROWTH] energy_drop at=(912,652) active_cores=6
+[GROWTH] energy_drop at=(917,602) active_cores=6
+[GROWTH] energy_drop at=(918,594) active_cores=6
+[GROWTH] energy_drop at=(1329,810) active_cores=6
+[GROWTH] energy_drop at=(936,545) active_cores=6
+[PERF] nodes=162 alive=15 dict=15 fps=143 draw_calls=0 rs_obj=0 script_ms=0.02
+[GROWTH] energy_drop at=(1325,747) active_cores=6
+[GROWTH] energy_drop at=(1343,702) active_cores=6
+[GROWTH] energy_drop at=(1035,487) active_cores=6
+[GROWTH] energy_collected xp=280/MAX
+[WAVE] wave=27 live_after=26
+[GROWTH] energy_drop at=(1148,887) active_cores=6
+[GROWTH] energy_drop at=(1098,896) active_cores=6
+[PERF] nodes=126 alive=24 dict=24 fps=141 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1064,426) active_cores=6
+[GROWTH] energy_drop at=(1033,410) active_cores=6
+[GROWTH] energy_drop at=(1278,445) active_cores=6
+[GROWTH] energy_drop at=(1403,716) active_cores=6
+[GROWTH] energy_drop at=(1400,728) active_cores=6
+[GROWTH] energy_drop at=(1342,826) active_cores=6
+[GROWTH] energy_drop at=(1329,839) active_cores=6
+[GROWTH] energy_drop at=(972,460) active_cores=6
+[GROWTH] energy_collected xp=290/MAX
+[GROWTH] energy_drop at=(967,767) active_cores=6
+[GROWTH] energy_drop at=(954,743) active_cores=6
+[PERF] nodes=106 alive=14 dict=14 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=28 live_after=26
+[GROWTH] energy_drop at=(1186,885) active_cores=6
+[GROWTH] energy_drop at=(1073,397) active_cores=6
+[GROWTH] energy_drop at=(1078,433) active_cores=6
+[GROWTH] energy_drop at=(1057,874) active_cores=6
+[GROWTH] energy_drop at=(1248,874) active_cores=6
+[GROWTH] energy_drop at=(1019,449) active_cores=6
+[GROWTH] energy_drop at=(1292,448) active_cores=6
+[GROWTH] energy_drop at=(1362,522) active_cores=6
+[GROWTH] energy_drop at=(1366,530) active_cores=6
+[GROWTH] energy_drop at=(1382,565) active_cores=6
+[GROWTH] energy_drop at=(913,598) active_cores=6
+[GROWTH] energy_collected xp=300/MAX
+[GROWTH] energy_drop at=(1355,669) active_cores=6
+[GROWTH] energy_drop at=(988,768) active_cores=6
+[GROWTH] energy_drop at=(1280,807) active_cores=6
+[PERF] nodes=102 alive=12 dict=12 fps=127 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=29 live_after=26
+[GROWTH] energy_drop at=(1198,413) active_cores=6
+[GROWTH] energy_drop at=(1041,436) active_cores=6
+[PERF] nodes=129 alive=24 dict=24 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1026,846) active_cores=6
+[GROWTH] energy_drop at=(904,670) active_cores=6
+[GROWTH] energy_drop at=(903,628) active_cores=6
+[GROWTH] energy_drop at=(915,571) active_cores=6
+[GROWTH] energy_drop at=(949,503) active_cores=6
+[GROWTH] energy_drop at=(1326,827) active_cores=6
+[GROWTH] energy_collected xp=310/MAX
+[GROWTH] energy_drop at=(1352,709) active_cores=6
+[GROWTH] energy_drop at=(1273,478) active_cores=6
+[GROWTH] energy_drop at=(1283,485) active_cores=6
+[GROWTH] energy_drop at=(1335,548) active_cores=6
+[WAVE] wave=30 live_after=26
+[PERF] nodes=130 alive=26 dict=26 fps=143 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1118,885) active_cores=6
+[GROWTH] energy_drop at=(1069,395) active_cores=6
+[SIX-MIN] t=211s tick=12661 alive=24 peak=26 fps=143 level=4 xp=318 kills=320 build=fan rank=3
+[GROWTH] energy_collected xp=320/MAX
+[GROWTH] energy_drop at=(1242,426) active_cores=6
+[GROWTH] energy_drop at=(1058,872) active_cores=6
+[GROWTH] energy_drop at=(1390,633) active_cores=6
+[GROWTH] energy_drop at=(1381,716) active_cores=6
+[GROWTH] energy_drop at=(1354,521) active_cores=6
+[GROWTH] energy_drop at=(1354,521) active_cores=6
+[GROWTH] energy_drop at=(1014,843) active_cores=6
+[GROWTH] energy_drop at=(935,548) active_cores=6
+[GROWTH] energy_drop at=(989,761) active_cores=6
+[GROWTH] energy_drop at=(991,764) active_cores=6
+[GROWTH] energy_drop at=(992,765) active_cores=6
+[GROWTH] energy_drop at=(959,605) active_cores=6
+[GROWTH] energy_collected xp=330/MAX
+[PERF] nodes=102 alive=12 dict=12 fps=133 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=31 live_after=26
+[GROWTH] energy_drop at=(1141,409) active_cores=6
+[GROWTH] energy_drop at=(1079,394) active_cores=6
+[GROWTH] energy_drop at=(1258,862) active_cores=6
+[GROWTH] energy_drop at=(1042,864) active_cores=6
+[GROWTH] energy_drop at=(1266,429) active_cores=6
+[GROWTH] energy_drop at=(1027,424) active_cores=6
+[GROWTH] energy_drop at=(1390,673) active_cores=6
+[GROWTH] energy_drop at=(1319,819) active_cores=6
+[GROWTH] energy_drop at=(1313,825) active_cores=6
+[GROWTH] energy_drop at=(1357,525) active_cores=6
+[GROWTH] energy_drop at=(984,819) active_cores=6
+[GROWTH] energy_drop at=(987,475) active_cores=6
+[PERF] nodes=148 alive=14 dict=14 fps=134 draw_calls=0 rs_obj=0 script_ms=0.02
+[GROWTH] energy_collected xp=340/MAX
+[WAVE] wave=32 live_after=26
+[GROWTH] energy_drop at=(1142,887) active_cores=6
+[GROWTH] energy_drop at=(1160,409) active_cores=6
+[GROWTH] energy_drop at=(1134,888) active_cores=6
+[GROWTH] energy_drop at=(1195,403) active_cores=6
+[PERF] nodes=122 alive=22 dict=22 fps=135 draw_calls=0 rs_obj=0 script_ms=0.02
+[GROWTH] energy_drop at=(1387,692) active_cores=6
+[GROWTH] energy_drop at=(1388,687) active_cores=6
+[GROWTH] energy_drop at=(1390,675) active_cores=6
+[GROWTH] energy_drop at=(1372,742) active_cores=6
+[GROWTH] energy_drop at=(1373,740) active_cores=6
+[GROWTH] energy_drop at=(1391,646) active_cores=6
+[GROWTH] energy_collected xp=350/MAX
+[GROWTH] energy_drop at=(995,770) active_cores=6
+[GROWTH] energy_drop at=(1304,521) active_cores=6
+[GROWTH] energy_drop at=(1343,595) active_cores=6
+[GROWTH] energy_drop at=(1338,717) active_cores=6
+[PERF] nodes=102 alive=12 dict=12 fps=145 draw_calls=0 rs_obj=0 script_ms=0.02
+[WAVE] wave=33 live_after=26
+[GROWTH] energy_drop at=(1148,887) active_cores=6
+[GROWTH] energy_drop at=(1186,405) active_cores=6
+[GROWTH] energy_drop at=(1206,896) active_cores=6
+[GROWTH] energy_collected xp=360/MAX
+[GROWTH] energy_drop at=(1221,430) active_cores=6
+[GROWTH] energy_drop at=(1257,884) active_cores=6
+[GROWTH] energy_drop at=(924,721) active_cores=6
+[GROWTH] energy_drop at=(937,753) active_cores=6
+[GROWTH] energy_drop at=(1010,841) active_cores=6
+[GROWTH] energy_drop at=(985,476) active_cores=6
+[GROWTH] energy_drop at=(1017,450) active_cores=6
+[GROWTH] energy_drop at=(1359,528) active_cores=6
+[GROWTH] energy_drop at=(1332,565) active_cores=6
+[PERF] nodes=106 alive=14 dict=14 fps=125 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_collected xp=370/MAX
+[WAVE] wave=34 live_after=26
+[GROWTH] energy_drop at=(1154,409) active_cores=6
+[GROWTH] energy_drop at=(1084,901) active_cores=6
+[GROWTH] energy_drop at=(1223,867) active_cores=6
+[GROWTH] energy_drop at=(1239,875) active_cores=6
+[GROWTH] energy_drop at=(1261,411) active_cores=6
+[GROWTH] energy_drop at=(1260,858) active_cores=6
+[PERF] nodes=121 alive=20 dict=20 fps=138 draw_calls=0 rs_obj=0 script_ms=0.01
+[SIX-MIN] t=241s tick=14469 alive=20 peak=26 fps=141 level=4 xp=376 kills=376 build=fan rank=3
+[GROWTH] energy_drop at=(1001,462) active_cores=6
+[GROWTH] energy_drop at=(942,533) active_cores=6
+[GROWTH] energy_drop at=(935,547) active_cores=6
+[GROWTH] energy_drop at=(920,592) active_cores=6
+[GROWTH] energy_drop at=(913,649) active_cores=6
+[GROWTH] energy_drop at=(918,696) active_cores=6
+[GROWTH] energy_collected xp=380/MAX
+[GROWTH] energy_drop at=(1332,731) active_cores=6
+[GROWTH] energy_drop at=(1331,733) active_cores=6
+[WAVE] wave=35 live_after=26
+[PERF] nodes=130 alive=26 dict=26 fps=143 draw_calls=0 rs_obj=0 script_ms=0.02
+[GROWTH] energy_drop at=(1202,882) active_cores=6
+[GROWTH] energy_drop at=(1095,411) active_cores=6
+[GROWTH] energy_drop at=(1263,436) active_cores=6
+[GROWTH] energy_drop at=(1391,638) active_cores=6
+[GROWTH] energy_drop at=(975,809) active_cores=6
+[GROWTH] energy_drop at=(943,765) active_cores=6
+[GROWTH] energy_drop at=(1343,504) active_cores=6
+[GROWTH] energy_drop at=(1331,489) active_cores=6
+[GROWTH] energy_drop at=(1296,457) active_cores=6
+[GROWTH] energy_collected xp=390/MAX
+[GROWTH] energy_drop at=(956,619) active_cores=6
+[GROWTH] energy_drop at=(961,593) active_cores=6
+[GROWTH] energy_drop at=(995,526) active_cores=6
+[PERF] nodes=106 alive=14 dict=14 fps=136 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=36 live_after=26
+[GROWTH] energy_drop at=(1161,409) active_cores=6
+[GROWTH] energy_drop at=(1082,901) active_cores=6
+[GROWTH] energy_drop at=(1058,868) active_cores=6
+[GROWTH] energy_drop at=(1057,428) active_cores=6
+[GROWTH] energy_drop at=(1047,873) active_cores=6
+[GROWTH] energy_drop at=(1041,876) active_cores=6
+[GROWTH] energy_drop at=(1276,413) active_cores=6
+[GROWTH] energy_collected xp=400/MAX
+[GROWTH] energy_drop at=(931,739) active_cores=6
+[GROWTH] energy_drop at=(1335,493) active_cores=6
+[GROWTH] energy_drop at=(1015,845) active_cores=6
+[GROWTH] energy_drop at=(1391,635) active_cores=6
+[GROWTH] energy_drop at=(1391,655) active_cores=6
+[GROWTH] energy_drop at=(1317,821) active_cores=6
+[PERF] nodes=128 alive=13 dict=13 fps=130 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1286,794) active_cores=6
+[GROWTH] energy_collected xp=410/MAX
+[WAVE] wave=37 live_after=26
+[GROWTH] energy_drop at=(1100,882) active_cores=6
+[PERF] nodes=128 alive=25 dict=25 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1248,428) active_cores=6
+[GROWTH] energy_drop at=(1051,426) active_cores=6
+[GROWTH] energy_drop at=(1269,418) active_cores=6
+[GROWTH] energy_drop at=(1302,461) active_cores=6
+[GROWTH] energy_drop at=(1390,622) active_cores=6
+[GROWTH] energy_drop at=(999,463) active_cores=6
+[GROWTH] energy_drop at=(987,475) active_cores=6
+[GROWTH] energy_drop at=(977,484) active_cores=6
+[GROWTH] energy_drop at=(914,675) active_cores=6
+[GROWTH] energy_collected xp=420/MAX
+[GROWTH] energy_drop at=(1023,799) active_cores=6
+[GROWTH] energy_drop at=(962,705) active_cores=6
+[WAVE] wave=38 live_after=26
+[PERF] nodes=130 alive=26 dict=26 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1160,409) active_cores=6
+[GROWTH] energy_drop at=(1273,854) active_cores=6
+[GROWTH] energy_drop at=(969,786) active_cores=6
+[GROWTH] energy_drop at=(966,781) active_cores=6
+[GROWTH] energy_drop at=(942,740) active_cores=6
+[GROWTH] energy_drop at=(938,729) active_cores=6
+[GROWTH] energy_drop at=(930,592) active_cores=6
+[GROWTH] energy_drop at=(1348,767) active_cores=6
+[GROWTH] energy_collected xp=430/MAX
+[GROWTH] energy_drop at=(1337,611) active_cores=6
+[GROWTH] energy_drop at=(1330,586) active_cores=6
+[GROWTH] energy_drop at=(1328,580) active_cores=6
+[GROWTH] energy_drop at=(1323,569) active_cores=6
+[GROWTH] energy_drop at=(1274,505) active_cores=6
+[GROWTH] energy_drop at=(1275,505) active_cores=6
+[PERF] nodes=156 alive=12 dict=12 fps=138 draw_calls=0 rs_obj=0 script_ms=0.02
+[SIX-MIN] t=271s tick=16276 alive=12 peak=26 fps=108 level=4 xp=436 kills=436 build=fan rank=3
+[WAVE] wave=39 live_after=26
+[GROWTH] energy_drop at=(1133,887) active_cores=6
+[GROWTH] energy_drop at=(1242,426) active_cores=6
+[PERF] nodes=126 alive=24 dict=24 fps=143 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1002,835) active_cores=6
+[GROWTH] energy_drop at=(983,818) active_cores=6
+[GROWTH] energy_drop at=(981,816) active_cores=6
+[GROWTH] energy_drop at=(954,783) active_cores=6
+[GROWTH] energy_drop at=(926,727) active_cores=6
+[GROWTH] energy_drop at=(924,722) active_cores=6
+[GROWTH] energy_collected xp=440/MAX
+[GROWTH] energy_drop at=(1296,785) active_cores=6
+[GROWTH] energy_drop at=(1343,594) active_cores=6
+[GROWTH] energy_drop at=(1337,574) active_cores=6
+[GROWTH] energy_drop at=(996,524) active_cores=6
+[WAVE] wave=40 live_after=26
+[PERF] nodes=130 alive=26 dict=26 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1145,409) active_cores=6
+[GROWTH] energy_drop at=(1181,890) active_cores=6
+[GROWTH] energy_drop at=(1199,894) active_cores=6
+[GROWTH] energy_drop at=(1212,898) active_cores=6
+[GROWTH] energy_collected xp=450/MAX
+[GROWTH] energy_drop at=(1081,867) active_cores=6
+[GROWTH] energy_drop at=(1253,853) active_cores=6
+[GROWTH] energy_drop at=(1270,863) active_cores=6
+[GROWTH] energy_drop at=(1025,868) active_cores=6
+[GROWTH] energy_drop at=(1355,521) active_cores=6
+[GROWTH] energy_drop at=(1391,642) active_cores=6
+[GROWTH] energy_drop at=(956,511) active_cores=6
+[GROWTH] energy_drop at=(951,518) active_cores=6
+[GROWTH] energy_drop at=(932,553) active_cores=6
+[GROWTH] energy_drop at=(968,801) active_cores=6
+[GROWTH] energy_collected xp=460/MAX
+[PERF] nodes=102 alive=12 dict=12 fps=142 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=41 live_after=26
+[GROWTH] energy_drop at=(1269,857) active_cores=6
+[GROWTH] energy_drop at=(1277,435) active_cores=6
+[GROWTH] energy_drop at=(1292,427) active_cores=6
+[GROWTH] energy_drop at=(1020,453) active_cores=6
+[GROWTH] energy_drop at=(1285,452) active_cores=6
+[GROWTH] energy_drop at=(1354,522) active_cores=6
+[GROWTH] energy_drop at=(1384,595) active_cores=6
+[GROWTH] energy_drop at=(1390,637) active_cores=6
+[GROWTH] energy_drop at=(1342,791) active_cores=6
+[PERF] nodes=136 alive=17 dict=17 fps=139 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_collected xp=470/MAX
+[GROWTH] energy_drop at=(1306,771) active_cores=6
+[GROWTH] energy_drop at=(997,526) active_cores=6
+[GROWTH] energy_drop at=(954,648) active_cores=6
+[WAVE] wave=42 live_after=26
+[GROWTH] energy_drop at=(1197,883) active_cores=6
+[GROWTH] energy_drop at=(1087,407) active_cores=6
+[GROWTH] energy_drop at=(1234,896) active_cores=6
+[PERF] nodes=124 alive=23 dict=23 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1049,432) active_cores=6
+[GROWTH] energy_drop at=(1259,430) active_cores=6
+[GROWTH] energy_drop at=(919,702) active_cores=6
+[GROWTH] energy_drop at=(1003,461) active_cores=6
+[GROWTH] energy_drop at=(1302,462) active_cores=6
+[GROWTH] energy_drop at=(1311,469) active_cores=6
+[GROWTH] energy_drop at=(1324,482) active_cores=6
+[GROWTH] energy_drop at=(1346,508) active_cores=6
+[GROWTH] energy_collected xp=480/MAX
+[GROWTH] energy_drop at=(1339,715) active_cores=6
+[GROWTH] energy_drop at=(1315,536) active_cores=6
+[GROWTH] energy_drop at=(1341,587) active_cores=6
+[WAVE] wave=43 live_after=26
+[PERF] nodes=130 alive=26 dict=26 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[SIX-MIN] t=301s tick=18091 alive=26 peak=26 fps=143 level=4 xp=488 kills=488 build=fan rank=3
+[GROWTH] energy_drop at=(1164,887) active_cores=6
+[GROWTH] energy_drop at=(1026,444) active_cores=6
+[GROWTH] energy_drop at=(1006,863) active_cores=6
+[GROWTH] energy_drop at=(962,470) active_cores=6
+[GROWTH] energy_drop at=(937,501) active_cores=6
+[GROWTH] energy_drop at=(901,578) active_cores=6
+[GROWTH] energy_drop at=(899,588) active_cores=6
+[GROWTH] energy_collected xp=490/MAX
+[GROWTH] energy_drop at=(1370,675) active_cores=6
+[GROWTH] energy_drop at=(1368,685) active_cores=6
+[GROWTH] energy_drop at=(951,736) active_cores=6
+[GROWTH] energy_drop at=(985,790) active_cores=6
+[GROWTH] energy_drop at=(1282,825) active_cores=6
+[GROWTH] energy_collected xp=500/MAX
+[PERF] nodes=106 alive=14 dict=14 fps=128 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=44 live_after=26
+[GROWTH] energy_drop at=(1174,410) active_cores=6
+[GROWTH] energy_drop at=(1099,403) active_cores=6
+[GROWTH] energy_drop at=(1213,400) active_cores=6
+[GROWTH] energy_drop at=(1076,428) active_cores=6
+[GROWTH] energy_drop at=(1034,408) active_cores=6
+[GROWTH] energy_drop at=(1034,856) active_cores=6
+[GROWTH] energy_drop at=(1028,436) active_cores=6
+[PERF] nodes=134 alive=19 dict=19 fps=134 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1365,543) active_cores=6
+[GROWTH] energy_drop at=(1381,584) active_cores=6
+[GROWTH] energy_drop at=(1353,775) active_cores=6
+[GROWTH] energy_drop at=(1329,806) active_cores=6
+[GROWTH] energy_drop at=(957,512) active_cores=6
+[GROWTH] energy_drop at=(922,707) active_cores=6
+[GROWTH] energy_collected xp=510/MAX
+[GROWTH] energy_drop at=(1001,774) active_cores=6
+[WAVE] wave=45 live_after=26
+[PERF] nodes=130 alive=26 dict=26 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1160,409) active_cores=6
+[GROWTH] energy_drop at=(1133,408) active_cores=6
+[GROWTH] energy_drop at=(1248,429) active_cores=6
+[GROWTH] energy_drop at=(1047,424) active_cores=6
+[GROWTH] energy_drop at=(1272,880) active_cores=6
+[GROWTH] energy_drop at=(1390,667) active_cores=6
+[GROWTH] energy_drop at=(1388,685) active_cores=6
+[GROWTH] energy_drop at=(1367,544) active_cores=6
+[GROWTH] energy_drop at=(1331,807) active_cores=6
+[GROWTH] energy_drop at=(1315,473) active_cores=6
+[GROWTH] energy_drop at=(1302,462) active_cores=6
+[GROWTH] energy_collected xp=520/MAX
+[GROWTH] energy_drop at=(972,564) active_cores=6
+[PERF] nodes=106 alive=14 dict=14 fps=145 draw_calls=0 rs_obj=0 script_ms=0.02
+[WAVE] wave=46 live_after=26
+[GROWTH] energy_drop at=(1156,409) active_cores=6
+[GROWTH] energy_drop at=(1169,408) active_cores=6
+[GROWTH] energy_drop at=(1118,891) active_cores=6
+[GROWTH] energy_drop at=(1099,896) active_cores=6
+[GROWTH] energy_drop at=(1214,899) active_cores=6
+[GROWTH] energy_drop at=(1085,396) active_cores=6
+[GROWTH] energy_collected xp=530/MAX
+[GROWTH] energy_drop at=(1279,851) active_cores=6
+[GROWTH] energy_drop at=(1358,492) active_cores=6
+[GROWTH] energy_drop at=(1320,452) active_cores=6
+[GROWTH] energy_drop at=(1355,808) active_cores=6
+[GROWTH] energy_drop at=(1346,818) active_cores=6
+[GROWTH] energy_drop at=(1325,839) active_cores=6
+[PERF] nodes=106 alive=14 dict=14 fps=128 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(976,520) active_cores=6
+[GROWTH] energy_drop at=(956,554) active_cores=6
+[GROWTH] energy_collected xp=540/MAX
+[WAVE] wave=47 live_after=26
+[GROWTH] energy_drop at=(1197,413) active_cores=6
+[PERF] nodes=128 alive=25 dict=25 fps=144 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1058,868) active_cores=6
+[GROWTH] energy_drop at=(1267,417) active_cores=6
+[GROWTH] energy_drop at=(1263,851) active_cores=6
+[GROWTH] energy_drop at=(1281,434) active_cores=6
+[SIX-MIN] t=332s tick=19905 alive=21 peak=26 fps=140 level=4 xp=543 kills=545 build=fan rank=3
+[GROWTH] energy_drop at=(1289,456) active_cores=6
+[GROWTH] energy_drop at=(1336,502) active_cores=6
+[GROWTH] energy_drop at=(1340,507) active_cores=6
+[GROWTH] energy_drop at=(1357,533) active_cores=6
+[GROWTH] energy_drop at=(1385,614) active_cores=6
+[GROWTH] energy_drop at=(917,653) active_cores=6
+[GROWTH] energy_collected xp=550/MAX
+[GROWTH] energy_drop at=(980,738) active_cores=6
+[WAVE] wave=48 live_after=26
+[PERF] nodes=130 alive=26 dict=26 fps=144 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1150,887) active_cores=6
+[GROWTH] energy_drop at=(1122,406) active_cores=6
+[GROWTH] energy_drop at=(1184,405) active_cores=6
+[GROWTH] energy_drop at=(1206,896) active_cores=6
+[GROWTH] energy_drop at=(1213,898) active_cores=6
+[GROWTH] energy_drop at=(1239,871) active_cores=6
+[GROWTH] energy_drop at=(1278,852) active_cores=6
+[GROWTH] energy_drop at=(946,487) active_cores=6
+[GROWTH] energy_drop at=(915,537) active_cores=6
+[GROWTH] energy_drop at=(999,436) active_cores=6
+[GROWTH] energy_drop at=(946,808) active_cores=6
+[GROWTH] energy_drop at=(1301,433) active_cores=6
+[GROWTH] energy_collected xp=560/MAX
+[GROWTH] energy_drop at=(1316,501) active_cores=6
+[GROWTH] energy_drop at=(1359,572) active_cores=6
+[PERF] nodes=102 alive=12 dict=12 fps=141 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=49 live_after=26
+[GROWTH] energy_drop at=(1144,887) active_cores=6
+[GROWTH] energy_drop at=(1108,403) active_cores=6
+[GROWTH] energy_drop at=(1242,426) active_cores=6
+[GROWTH] energy_drop at=(1062,426) active_cores=6
+[GROWTH] energy_collected xp=570/MAX
+[PERF] nodes=122 alive=22 dict=22 fps=140 draw_calls=0 rs_obj=0 script_ms=0.01
+[GROWTH] energy_drop at=(1356,522) active_cores=6
+[GROWTH] energy_drop at=(972,806) active_cores=6
+[GROWTH] energy_drop at=(967,801) active_cores=6
+[GROWTH] energy_drop at=(914,622) active_cores=6
+[GROWTH] energy_drop at=(917,601) active_cores=6
+[GROWTH] energy_drop at=(943,531) active_cores=6
+[GROWTH] energy_drop at=(990,532) active_cores=6
+[GROWTH] energy_drop at=(991,532) active_cores=6
+[WAVE] wave=50 live_after=26
+[PERF] nodes=130 alive=26 dict=26 fps=145 draw_calls=0 rs_obj=0 script_ms=0.02
+[GROWTH] energy_drop at=(1151,409) active_cores=6
+[GROWTH] energy_drop at=(1164,888) active_cores=6
+[GROWTH] energy_drop at=(1130,889) active_cores=6
+[GROWTH] energy_drop at=(1187,891) active_cores=6
+[GROWTH] energy_drop at=(1083,901) active_cores=6
+[GROWTH] energy_drop at=(1226,393) active_cores=6
+[GROWTH] energy_collected xp=580/MAX
+[GROWTH] energy_drop at=(1026,852) active_cores=6
+[GROWTH] energy_drop at=(1014,858) active_cores=6
+[GROWTH] energy_drop at=(1308,440) active_cores=6
+[GROWTH] energy_drop at=(1353,483) active_cores=6
+[GROWTH] energy_drop at=(1406,590) active_cores=6
+[GROWTH] energy_drop at=(1411,622) active_cores=6
+[GROWTH] energy_collected xp=590/MAX
+[GROWTH] energy_drop at=(1019,472) active_cores=6
+[GROWTH] energy_drop at=(1363,709) active_cores=6
+[PERF] nodes=102 alive=12 dict=12 fps=145 draw_calls=0 rs_obj=0 script_ms=0.01
+[WAVE] wave=51 live_after=26
+[GROWTH] energy_drop at=(1078,420) active_cores=6
+[GROWTH] energy_drop at=(1250,887) active_cores=6
+[GROWTH] energy_drop at=(1259,863) active_cores=6
+[GROWTH] energy_drop at=(1280,445) active_cores=6
+[GROWTH] energy_drop at=(1010,859) active_cores=6
+[GROWTH] energy_drop at=(990,448) active_cores=6
+[GROWTH] energy_drop at=(942,500) active_cores=6
+[GROWTH] energy_drop at=(933,513) active_cores=6
+[GROWTH] energy_drop at=(934,513) active_cores=6
+[TERMINAL] outcome=victory (control completion)
+[SIX-MIN] terminal outcome=victory elapsed=360.8s tick=21609 level=4 kills=601 build=fan rank=3 segments_lost=0 peak_alive=26 min_fps=70
+[TERMINAL-AUTO-RESTART] canonical reset -> new run; segments_lost=0 (no cross-run loss)
+[PERF] nodes=78 alive=0 dict=0 fps=144 draw_calls=0 rs_obj=0 script_ms=0.01
+[SIX-MIN] restart run_id=1->2 clean=true
+[SIX-MIN] RESULT=passed
+WARNING: 2 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 1 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)

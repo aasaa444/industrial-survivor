@@ -225,6 +225,12 @@ var _enemy_death_sfx_player: AudioStreamPlayer
 var _upgrade_sfx_player: AudioStreamPlayer
 var _card_confirm_sfx_player: AudioStreamPlayer
 var _jingle_player: AudioStreamPlayer
+var _xp_pickup_sfx_player: AudioStreamPlayer
+
+# XP pickup chain (survivors-like benchmark: bright short blip, pitch climbs with
+# rapid consecutive pickups, throttled; streak decays after 1s of silence).
+var _pickup_streak: int = 0
+var _last_pickup_sfx_time: float = -10.0
 
 # Texture resources for player animation
 var _player_idle_texture: Texture2D
@@ -356,6 +362,12 @@ func _ready() -> void:
 	_jingle_player.volume_db = -8.0
 	add_child(_jingle_player)
 
+	# XP pickup blip (reward-growth layer): above attack/kill, below upgrade sounds.
+	_xp_pickup_sfx_player = AudioStreamPlayer.new()
+	_xp_pickup_sfx_player.stream = preload("res://assets/audio/xp_pickup.wav")
+	_xp_pickup_sfx_player.volume_db = -16.0
+	add_child(_xp_pickup_sfx_player)
+
 	_build_visuals(self_test_mode)
 	spawn_grace_remaining = 1.0
 	resolve_delay_remaining = 0.0
@@ -441,6 +453,8 @@ func _toggle_sfx_mute() -> void:
 		_card_confirm_sfx_player.volume_db = -60.0 if _sfx_muted else SFX_BASE_VOLUMES["card"]
 	if _jingle_player:
 		_jingle_player.volume_db = -60.0 if _sfx_muted else -8.0
+	if _xp_pickup_sfx_player:
+		_xp_pickup_sfx_player.volume_db = -60.0 if _sfx_muted else -16.0
 	print("[AUDIO] SFX %s (M toggles)" % ("muted" if _sfx_muted else "unmuted"))
 
 
@@ -598,24 +612,36 @@ func _update_energy_cores(delta: float) -> void:
 		var to_player: Vector2 = position - node.position
 		if to_player.length() <= XP_PICKUP_RADIUS:
 			node.position += to_player.normalized() * XP_PICKUP_SPEED * delta
+			# XP increments ONLY on actual collection (core reaches the player and
+			# deactivates). The increment must stay INSIDE this branch: an in-radius
+			# core still in flight must not add XP every frame (p4 pacing regression:
+			# ~40x XP inflation from per-frame collection of flying cores).
 			if node.position.distance_to(position) <= 12.0:
 				node.visible = false
 				core.active = false
-			_set_progression(player_xp + 1, player_level)
-			var display_threshold: int = XP_TO_LEVEL_2 if player_level <= 1 else (XP_TO_LEVEL_3 if player_level == 2 else (XP_TO_LEVEL_4 if player_level == 3 else 0))
-			if display_threshold > 0 and (player_xp == display_threshold or player_xp % 5 == 0):
-				print("[GROWTH] energy_collected xp=%d/%d" % [player_xp, display_threshold])
-			elif display_threshold == 0 and player_xp % 10 == 0:
-				print("[GROWTH] energy_collected xp=%d/MAX" % player_xp)
-			if player_level == 1 and player_xp >= XP_TO_LEVEL_2 and not _upgrade_pending:
-				_set_progression(player_xp, 2)
-				_start_upgrade("build_choice")
-			elif player_level == 2 and player_xp >= XP_TO_LEVEL_3 and not _upgrade_pending:
-				_set_progression(player_xp, 3)
-				_start_upgrade("build_upgrade")
-			elif player_level == 3 and player_xp >= XP_TO_LEVEL_4 and not _upgrade_pending:
-				_set_progression(player_xp, 4)
-				_start_upgrade("build_upgrade")
+				_set_progression(player_xp + 1, player_level)
+				if not self_test_mode:
+					var now_p: float = Time.get_ticks_msec() / 1000.0
+					if now_p - _last_pickup_sfx_time >= 0.08:
+						_pickup_streak = _pickup_streak + 1 if now_p - _last_pickup_sfx_time < 1.0 else 0
+						_pickup_streak = mini(_pickup_streak, 8)
+						_last_pickup_sfx_time = now_p
+						_xp_pickup_sfx_player.pitch_scale = 1.0 + _pickup_streak * 0.06
+						_xp_pickup_sfx_player.play()
+				var display_threshold: int = XP_TO_LEVEL_2 if player_level <= 1 else (XP_TO_LEVEL_3 if player_level == 2 else (XP_TO_LEVEL_4 if player_level == 3 else 0))
+				if display_threshold > 0 and (player_xp == display_threshold or player_xp % 5 == 0):
+					print("[GROWTH] energy_collected xp=%d/%d" % [player_xp, display_threshold])
+				elif display_threshold == 0 and player_xp % 10 == 0:
+					print("[GROWTH] energy_collected xp=%d/MAX" % player_xp)
+				if player_level == 1 and player_xp >= XP_TO_LEVEL_2 and not _upgrade_pending:
+					_set_progression(player_xp, 2)
+					_start_upgrade("build_choice")
+				elif player_level == 2 and player_xp >= XP_TO_LEVEL_3 and not _upgrade_pending:
+					_set_progression(player_xp, 3)
+					_start_upgrade("build_upgrade")
+				elif player_level == 3 and player_xp >= XP_TO_LEVEL_4 and not _upgrade_pending:
+					_set_progression(player_xp, 4)
+					_start_upgrade("build_upgrade")
 
 
 
@@ -1047,6 +1073,7 @@ func _auto_restart() -> void:
 	# legacy direct writes missed (cross-run build residue).
 	_set_progression(0, 1)
 	_reset_build()
+	_pickup_streak = 0
 	run_kills = 0
 	counted_kill_ids.clear()
 	for core in energy_cores:

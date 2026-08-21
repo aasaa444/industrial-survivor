@@ -1,0 +1,34 @@
+{
+  "schema_version": "capture-window-v1",
+  "pid": 940,
+  "title": "godot_game_dev (DEBUG)",
+  "window_rect": [
+    696,
+    345,
+    1864,
+    1032
+  ],
+  "project_root": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P4-DEFEAT-4e749e8",
+  "output": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P4-DEFEAT-4e749e8\\restart_fresh_hud.png",
+  "scenario": "p4_defeat",
+  "state": "restart_fresh_hud",
+  "action": "bad_play_defeat",
+  "git_sha": "4e749e8998edda0d6b90e8664c306849336c12f8",
+  "will_mutate_project": false,
+  "captured_at_utc": "2026-08-21T21:12:08.780800+00:00",
+  "image_size": [
+    1168,
+    687
+  ],
+  "average_rgb": [
+    91,
+    74,
+    60
+  ],
+  "sha256": "dc0339c1dd7efed9ca0375236247cd812cf060a2acd9166fc0cb31d5f09aa2be",
+  "capture_route": "native_window_diagnostic",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "python": "3.14.0",
+  "pillow": "12.1.0",
+  "evidence_boundary": "visible pixels/window identity only; runtime domain state unproven"
+}
