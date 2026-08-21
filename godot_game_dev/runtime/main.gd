@@ -127,6 +127,8 @@ var player_xp: int = 0
 var rail_pierce_active: bool = false
 var scatter_fan_active: bool = false
 var kinetic_pulse_active: bool = false
+var _pulse_flash_remaining: float = 0.0
+var _pulse_flash_radius: float = 0.0
 var energy_cores: Array = []  # [{node: Polygon2D, active: bool}]; bounded visual object pool
 var xp_label: Label
 
@@ -155,6 +157,7 @@ var _result_state: String = ""         # "" | "victory" | "defeat"  (runtime mir
 var _result_remaining: float = 0.0     # countdown to automatic immediate retry (short result, then reset)
 
 var self_test_mode: bool = false
+var qa_auto_select: bool = false
 var self_test_t: float = 0.0
 var self_test_killed: Array = []
 var self_test_fire_issued: bool = false
@@ -305,13 +308,13 @@ func _ready() -> void:
 
 
 func _self_test_mode_detect() -> void:
-	# Scan both user args and the full engine arg list: some Godot 4 invocations deliver trailing flags to one or the other.
+	# Scan both user args and full engine args; QA auto-select is explicit and never enabled for normal play.
 	for a in OS.get_cmdline_user_args():
-		if a == "--self-test":
-			self_test_mode = true
+		if a == "--self-test": self_test_mode = true
+		if a == "--qa-auto-select": qa_auto_select = true
 	for a in OS.get_cmdline_args():
-		if a == "--self-test":
-			self_test_mode = true
+		if a == "--self-test": self_test_mode = true
+		if a == "--qa-auto-select": qa_auto_select = true
 
 
 # Fixed world layer: the root Main node IS the player and moves with input, so all
@@ -422,7 +425,8 @@ func _update_energy_cores(delta: float) -> void:
 				node.visible = false
 				core.active = false
 				player_xp += 1
-				print("[GROWTH] energy_collected xp=%d/%d" % [player_xp, XP_TO_LEVEL_2])
+				var display_threshold: int = XP_TO_LEVEL_2 if player_level <= 1 else (XP_TO_LEVEL_3 if player_level == 2 else (XP_TO_LEVEL_4 if player_level == 3 else 0))
+				print("[GROWTH] energy_collected xp=%d/%d" % [min(player_xp, display_threshold) if display_threshold > 0 else player_xp, display_threshold])
 				if player_level == 1 and player_xp >= XP_TO_LEVEL_2 and not _upgrade_first_done and not _upgrade_pending:
 					player_level = 2
 					_start_upgrade("pierce")
@@ -1298,7 +1302,10 @@ func _handle_upgrade_phase(delta: float) -> void:
 		2:  # inspection — input handled by _unhandled_input and mouse signals
 			# Fallback for window/input backends that drop edge events: the current Slice B
 			# has one card, so a physical 1 press remains unambiguous and guarded.
-			if Input.is_key_pressed(KEY_1) and not _card_input_guarded:
+			if qa_auto_select and not _card_input_guarded:
+				_card_input_mode = "qa_auto"
+				_select_upgrade_card(0)
+			elif Input.is_key_pressed(KEY_1) and not _card_input_guarded:
 				_card_input_mode = "keyboard"
 				_select_upgrade_card(0)
 		3:  # pressed — brief darken
@@ -1499,6 +1506,14 @@ func _process(delta: float) -> void:
 
 	# --- Simple procedural animation: player bob + facing flip, enemy chase wobble ---
 	_anim_time += delta
+	if _pulse_flash_remaining > 0.0:
+		_pulse_flash_remaining -= delta
+		_pulse_flash_radius = move_toward(_pulse_flash_radius, 150.0, 720.0 * delta)
+		if _attack_glow_line:
+			_attack_glow_line.width = 10.0
+			_attack_glow_line.default_color = Color(0.3, 0.9, 1.0, 0.8)
+	else:
+		_pulse_flash_radius = 0.0
 	if _player_sprite_node:
 		_player_sprite_node.position.y = sin(_anim_time * 10.0) * 1.4
 		if float(movement["dir_x"]) < -0.1:
@@ -1573,10 +1588,15 @@ func _process(delta: float) -> void:
 
 	if kinetic_pulse_active:
 		# Real close-range pulse: push nearby enemies away from the player every combat step.
+		var pulse_hit: bool = false
 		for e in on_screen:
 			var pulse_dist: float = e.node.position.distance_to(position)
 			if pulse_dist < 150.0 and pulse_dist > 1.0:
 				e.node.position += (e.node.position - position).normalized() * 90.0 * delta
+				pulse_hit = true
+		if pulse_hit:
+			_pulse_flash_remaining = 0.18
+			_pulse_flash_radius = 20.0
 
 	# --- fire cadence (rules-core drive via session) ---
 	if live_candidates.is_empty():
