@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://qa/qa_upgrade_transaction.gd" id="1_qatx"]
+
+[node name="qa_upgrade_transaction" type="Node"]
+script = ExtResource("1_qatx")

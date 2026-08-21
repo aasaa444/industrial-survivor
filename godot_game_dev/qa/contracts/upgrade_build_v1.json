@@ -8,7 +8,7 @@
     "writers": ["progression_controller"],
     "readers": ["growth_hud", "upgrade_ui", "weapon_resolver", "combat_presenter", "audio_presenter", "reset_controller"]
   },
-  "input_entry_points": ["choose_upgrade(index, keyboard)", "choose_upgrade(index, mouse)", "choose_upgrade(index, qa)"],
+  "input_entry_points": ["choose_upgrade(index, keyboard)", "choose_upgrade(index, mouse_global)", "choose_upgrade(index, poll)", "choose_upgrade(index, qa)"],
   "transaction": [
     {"id": "trigger", "kind": "input_or_event", "source": "energy_core_collected", "expected": "XP increments exactly once"},
     {"id": "mutate", "kind": "state", "owner": "ProgressionController", "expected": "level/xp/build/rank authoritative delta"},
@@ -17,20 +17,26 @@
     {"id": "feedback", "kind": "vfx_audio", "source": "progression_or_combat_event", "expected": "selection/application feedback occurs once"},
     {"id": "reset", "kind": "reset", "source": "canonical_reset_controller", "expected": "progression/UI/build reset and run identity advances"}
   ],
+  "ownership_boundary": {
+    "progression_build_ui_owner": "runtime/main.gd authoritative dictionaries progression_state / build_state / upgrade_ui_state with setters _set_progression / _set_build / _reset_build / _set_upgrade_ui and the single selection command choose_upgrade(index, source)",
+    "rules_session_role": "combat rule result only: rules_core b2_phase / attack_max_targets / attack_fan_arcs are attack parameters applied via session.step(upgrade_select); the rules core is NOT a second progression owner",
+    "reset_owner": "_auto_restart() is the canonical reset command (session.reset + _set_progression(0,1) + _reset_build + _set_upgrade_ui(false,...))"
+  },
   "legacy": {
-    "paths": [
-      "_upgrade_first_done",
-      "_upgrade_second_done",
-      "rail_pierce_active",
-      "scatter_fan_active",
-      "kinetic_pulse_active",
-      "fixed_tick_upgrade",
-      "fixed_card_coordinates",
-      "direct_gui_input_selection",
-      "polling_selection_writer"
+    "removed_paths": [
+      {"name": "_upgrade_first_done", "removed_in": "P1 migration 2026-08-22", "proof": "zero occurrences in staged main.gd; clear-effect branch reads active_build"},
+      {"name": "_upgrade_second_done", "removed_in": "P1 migration 2026-08-22", "proof": "zero occurrences in staged main.gd; clear-effect branch reads active_build"},
+      {"name": "direct_gui_input_selection", "removed_in": "P1 migration 2026-08-22", "proof": "_on_card_gui_input deleted; no Control gui_input writer is connected"},
+      {"name": "fixed_tick_upgrade", "removed_in": "earlier slice", "proof": "_check_upgrade_windows is a documented no-op stub; progression triggers only from collected energy"}
+    ],
+    "temporary_read_only_mirrors": [
+      {"name": "player_xp / player_level", "writer": "_sync_progression_read_model only", "expiry": "remove when all readers consume progression_state directly"},
+      {"name": "active_build / build_rank", "writer": "_sync_progression_read_model only", "expiry": "remove when all readers consume build_state directly"},
+      {"name": "rail_pierce_active / scatter_fan_active / kinetic_pulse_active", "writer": "_sync_progression_read_model only", "expiry": "remove when all readers consume build_state.enabled directly"},
+      {"name": "_upgrade_pending / _upgrade_phase / _card_state / _card_selected_idx / _card_input_guarded", "writer": "_sync_progression_read_model only", "expiry": "remove when all readers consume upgrade_ui_state directly"}
     ],
     "removal_condition": "upgrade_build_v1 migration complete",
-    "proof": "verifier scans staged candidate and runtime evidence"
+    "proof": "L1 writer scan (2026-08-22): every mirror write site is inside _sync_progression_read_model; runtime playtests pierce/fan/pulse rank progressions pass through choose_upgrade with source tags"
   },
   "acceptance": {
     "required_step_ids": ["trigger", "mutate", "read_model", "behavior", "feedback", "reset"],

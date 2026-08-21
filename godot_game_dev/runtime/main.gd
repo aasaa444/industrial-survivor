@@ -146,6 +146,10 @@ const XP_TO_LEVEL_3: int = 25      # target: ~60-90s second build
 const XP_TO_LEVEL_4: int = 60      # target: ~2-3min third build
 const XP_PICKUP_RADIUS: float = 420.0
 const XP_PICKUP_SPEED: float = 520.0
+var progression_state: Dictionary = {"xp": 0, "level": 1}
+var build_state: Dictionary = {"active_build": "", "rank": 0, "enabled": {"pierce": false, "fan": false, "pulse": false}}
+var upgrade_ui_state: Dictionary = {"pending": false, "phase": "", "card_state": 0, "selected_idx": -1, "input_guarded": false}
+# Compatibility read mirrors. Production writes go through the three state dictionaries above.
 var player_level: int = 1
 var player_xp: int = 0
 var rail_pierce_active: bool = false
@@ -162,6 +166,50 @@ var _pulse_flash_remaining: float = 0.0
 var _pulse_flash_radius: float = 0.0
 var energy_cores: Array = []
 var xp_label: Label
+
+func _sync_progression_read_model() -> void:
+	player_xp = int(progression_state.get("xp", 0))
+	player_level = int(progression_state.get("level", 1))
+	active_build = String(build_state.get("active_build", ""))
+	build_rank = int(build_state.get("rank", 0))
+	var enabled: Dictionary = build_state.get("enabled", {})
+	rail_pierce_active = bool(enabled.get("pierce", false))
+	scatter_fan_active = bool(enabled.get("fan", false))
+	kinetic_pulse_active = bool(enabled.get("pulse", false))
+	_upgrade_pending = bool(upgrade_ui_state.get("pending", false))
+	_upgrade_phase = String(upgrade_ui_state.get("phase", ""))
+	_card_state = int(upgrade_ui_state.get("card_state", 0))
+	_card_selected_idx = int(upgrade_ui_state.get("selected_idx", -1))
+	_card_input_guarded = bool(upgrade_ui_state.get("input_guarded", false))
+
+func _set_progression(xp_value: int, level_value: int) -> void:
+	progression_state["xp"] = max(0, xp_value)
+	progression_state["level"] = max(1, level_value)
+	_sync_progression_read_model()
+
+func _set_build(build_name: String, rank_value: int) -> void:
+	var enabled: Dictionary = build_state.get("enabled", {}).duplicate()
+	if build_name != "":
+		enabled[build_name] = true
+	build_state["active_build"] = build_name
+	build_state["rank"] = clampi(rank_value, 0, 3)
+	build_state["enabled"] = enabled
+	_sync_progression_read_model()
+
+# upgrade_build_v1 canonical reset: the ONLY path that clears the build (restart transaction).
+func _reset_build() -> void:
+	build_state["active_build"] = ""
+	build_state["rank"] = 0
+	build_state["enabled"] = {"pierce": false, "fan": false, "pulse": false}
+	_sync_progression_read_model()
+
+func _set_upgrade_ui(pending: bool, phase: String, card_state_value: int, selected_idx: int, guarded: bool) -> void:
+	upgrade_ui_state["pending"] = pending
+	upgrade_ui_state["phase"] = phase
+	upgrade_ui_state["card_state"] = card_state_value
+	upgrade_ui_state["selected_idx"] = selected_idx
+	upgrade_ui_state["input_guarded"] = guarded
+	_sync_progression_read_model()
 
 # B5: Arena background
 var arena_bg: Sprite2D
@@ -205,8 +253,6 @@ var self_test_seen_result: bool = false          # T4: observed the result phase
 var _upgrade_pending: bool = false
 var _upgrade_phase: String = ""           # "pierce" | "fan"
 var _upgrade_cards: Array = []            # [{id, keyword, difference, effect, shortcut}]
-var _upgrade_first_done: bool = false
-var _upgrade_second_done: bool = false
 var _upgrade_card_labels: Array = []      # [Label, Label, Label] card text labels (deprecated; kept for cleanup)
 var _upgrade_prompt_label: Label          # prompt label
 var _fan_left_line: Line2D                # fan left arc line
@@ -404,8 +450,7 @@ func _input(event: InputEvent) -> void:
 			var card: Dictionary = _card_nodes[i]
 			var bg: TextureRect = card.bg
 			if is_instance_valid(bg) and bg.visible and bg.get_global_rect().has_point(mouse_pos):
-				_card_input_mode = "mouse_global"
-				_select_upgrade_card(i)
+				choose_upgrade(i, "mouse_global")
 				get_viewport().set_input_as_handled()
 				return
 
@@ -552,21 +597,22 @@ func _update_energy_cores(delta: float) -> void:
 			if node.position.distance_to(position) <= 12.0:
 				node.visible = false
 				core.active = false
-				player_xp += 1
-				var display_threshold: int = XP_TO_LEVEL_2 if player_level <= 1 else (XP_TO_LEVEL_3 if player_level == 2 else (XP_TO_LEVEL_4 if player_level == 3 else 0))
-				if display_threshold > 0 and (player_xp == display_threshold or player_xp % 5 == 0):
-					print("[GROWTH] energy_collected xp=%d/%d" % [player_xp, display_threshold])
-				elif display_threshold == 0 and player_xp % 10 == 0:
-					print("[GROWTH] energy_collected xp=%d/MAX" % player_xp)
-				if player_level == 1 and player_xp >= XP_TO_LEVEL_2 and not _upgrade_pending:
-					player_level = 2
-					_start_upgrade("build_choice")
-				elif player_level == 2 and player_xp >= XP_TO_LEVEL_3 and not _upgrade_pending:
-					player_level = 3
-					_start_upgrade("build_upgrade")
-				elif player_level == 3 and player_xp >= XP_TO_LEVEL_4 and not _upgrade_pending:
-					player_level = 4
-					_start_upgrade("build_upgrade")
+			_set_progression(player_xp + 1, player_level)
+			var display_threshold: int = XP_TO_LEVEL_2 if player_level <= 1 else (XP_TO_LEVEL_3 if player_level == 2 else (XP_TO_LEVEL_4 if player_level == 3 else 0))
+			if display_threshold > 0 and (player_xp == display_threshold or player_xp % 5 == 0):
+				print("[GROWTH] energy_collected xp=%d/%d" % [player_xp, display_threshold])
+			elif display_threshold == 0 and player_xp % 10 == 0:
+				print("[GROWTH] energy_collected xp=%d/MAX" % player_xp)
+			if player_level == 1 and player_xp >= XP_TO_LEVEL_2 and not _upgrade_pending:
+				_set_progression(player_xp, 2)
+				_start_upgrade("build_choice")
+			elif player_level == 2 and player_xp >= XP_TO_LEVEL_3 and not _upgrade_pending:
+				_set_progression(player_xp, 3)
+				_start_upgrade("build_upgrade")
+			elif player_level == 3 and player_xp >= XP_TO_LEVEL_4 and not _upgrade_pending:
+				_set_progression(player_xp, 4)
+				_start_upgrade("build_upgrade")
+
 
 
 func _update_growth_hud() -> void:
@@ -819,7 +865,7 @@ func _build_visuals(for_self_test: bool) -> void:
 		_card_hud.add_child(cl)
 		_upgrade_card_labels.append(cl)
 
-		_build_pause_overlay()
+	_build_pause_overlay()
 
 	# B2 fan arc glow lines (behind the core fan lines, wider + semi-transparent).
 	_fan_left_glow_line = Line2D.new()
@@ -897,13 +943,18 @@ func _build_visuals(for_self_test: bool) -> void:
 
 
 func _self_test_add_enemies() -> void:
-	# Deterministic scene layout for the headless self-test.
-	# Enemy 1 is placed OUTSIDE the player's AABB overlap range (dx=40 > 12+13) so the kill/clear phase is contact-free;
-	# the dedicated contact phase adds a separate overlapping enemy to assert exactly one contact damage.
-	_new_enemy_node(Vector2(280, 360), 1, Color(0.9, 0.35, 0.2))
-	_new_enemy_node(Vector2(560, 180), 1, Color(0.9, 0.35, 0.2))
-	# Distance to player start (320,360): enemy id1 at (280,360) dist 40 (no AABB overlap); enemy id2 at (560,180) dist ~290.
-	# Nearest-threat -> enemy id1 locks first.
+	# Deterministic scene layout for the headless self-test. The player starts at
+	# WORLD_SIZE*0.5 (arena center); enemies are placed relative to that start so they
+	# stay inside ATTACK_RANGE after the iteration-2 scrolling-arena resize (the old
+	# absolute (280,360)/(560,180) layout sat ~918px away and never locked).
+	# Enemy 1 is placed OUTSIDE the player's AABB overlap range (dx=40 > 12+13) so the
+	# kill/clear phase is contact-free; the dedicated contact phase adds a separate
+	# overlapping enemy to assert exactly one contact damage.
+	var origin: Vector2 = WORLD_SIZE * 0.5
+	_new_enemy_node(origin + Vector2(-40, 0), 1, Color(0.9, 0.35, 0.2))
+	_new_enemy_node(origin + Vector2(60, -20), 1, Color(0.9, 0.35, 0.2))
+	# Distances to player start: enemy id1 dx=40 (no AABB overlap, inside ATTACK_RANGE);
+	# enemy id2 ~63. Nearest-threat -> enemy id1 locks first.
 
 
 # --- R1 formalized real input path: WASD + arrows, held-key polling. ---
@@ -987,13 +1038,13 @@ func _auto_restart() -> void:
 	_wave_timer = WAVE_INTERVAL - 2.0
 	_wave_index = 0
 	_tick_accumulator = 0.0
-	player_level = 1
-	player_xp = 0
-	active_build = ""
-	build_rank = 0
+	# Canonical reset: progression/build/UI state resets ONLY through the authoritative
+	# setters (upgrade_build_v1). This also clears the fan/pulse read mirrors that the
+	# legacy direct writes missed (cross-run build residue).
+	_set_progression(0, 1)
+	_reset_build()
 	run_kills = 0
 	counted_kill_ids.clear()
-	rail_pierce_active = false
 	for core in energy_cores:
 		if is_instance_valid(core.node): core.node.visible = false
 		core.active = false
@@ -1017,12 +1068,9 @@ func _auto_restart() -> void:
 		life_label.text = "生命  [o][o][o]"
 	if timer_label:
 		timer_label.text = "剩余  06:00"
-	# Reset B2 upgrade runtime state.
-	_upgrade_pending = false
-	_upgrade_phase = ""
+	# Reset B2 upgrade runtime state through the authoritative UI setter.
 	_upgrade_cards = []
-	_upgrade_first_done = false
-	_upgrade_second_done = false
+	_set_upgrade_ui(false, "", 0, -1, false)
 	attack_line.width = 3.0
 	attack_line.default_color = _attack_base_color
 	_fan_left_line.visible = false
@@ -1057,9 +1105,6 @@ func _auto_restart() -> void:
 			c.bg.visible = false
 	for cl in _upgrade_card_labels:
 		cl.visible = false
-	_card_state = 0
-	_card_input_guarded = false
-	_card_selected_idx = -1
 	_card_focused_idx = 1
 	_card_hovered_idx = -1
 	# Print the deterministic no-cross-run-loss evidence line (segments_lost now 0 in the fresh rules state).
@@ -1411,18 +1456,6 @@ func _on_card_mouse_exited(idx: int) -> void:
 		_update_card_visuals()
 
 
-func _on_card_gui_input(event: InputEvent, idx: int) -> void:
-	if _card_state != 2:
-		return
-	if _card_input_guarded:
-		return
-	if event is InputEventMouseButton:
-		var mb := event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			_card_input_mode = "mouse"
-			_select_upgrade_card(idx)
-
-
 # --- B2 keyboard focus movement ---
 func _move_focus(delta: int) -> void:
 	if _card_state != 2:
@@ -1443,7 +1476,7 @@ func _confirm_focused_card() -> void:
 	if _card_input_guarded:
 		return
 	_card_input_mode = "keyboard"
-	_select_upgrade_card(_card_focused_idx)
+	choose_upgrade(_card_focused_idx, "keyboard")
 
 
 # --- B2 edge-triggered keyboard input (replaces per-frame polling) ---
@@ -1460,21 +1493,17 @@ func _unhandled_input(event: InputEvent) -> void:
 				var candidate: Dictionary = _card_nodes[i]
 				var card_bg: TextureRect = candidate.bg
 				if is_instance_valid(card_bg) and card_bg.visible and card_bg.get_global_rect().has_point(local_pos):
-					_card_input_mode = "mouse_global"
-					_select_upgrade_card(i)
+					choose_upgrade(i, "mouse_global")
 					return
 			return
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
 			KEY_1, KEY_KP_1:
-				_card_input_mode = "keyboard"
-				_select_upgrade_card(0)
+				choose_upgrade(0, "keyboard")
 			KEY_2, KEY_KP_2:
-				_card_input_mode = "keyboard"
-				_select_upgrade_card(1)
+				choose_upgrade(1, "keyboard")
 			KEY_3, KEY_KP_3:
-				_card_input_mode = "keyboard"
-				_select_upgrade_card(2)
+				choose_upgrade(2, "keyboard")
 			KEY_LEFT:
 				_move_focus(-1)
 			KEY_RIGHT:
@@ -1491,12 +1520,12 @@ func _check_upgrade_windows() -> void:
 
 # --- B2: start an upgrade window (pause combat, animate cards in) ---
 func _start_upgrade(phase: String) -> void:
-	_upgrade_pending = true
-	_upgrade_phase = phase
-	_card_state = 1  # transition_in
-	_card_input_guarded = true
+	_set_upgrade_ui(true, phase, 1, -1, true)
+
+
+
 	_card_phase_timer = 0.2
-	_card_selected_idx = -1
+
 	_card_focused_idx = 1
 	_card_hovered_idx = -1
 	_card_input_mode = "keyboard"
@@ -1548,76 +1577,72 @@ func _start_upgrade(phase: String) -> void:
 
 # --- B2: handle upgrade card selection phase (state machine, called each frame while _upgrade_pending) ---
 func _handle_upgrade_phase(delta: float) -> void:
-	match _card_state:
-		1:  # transition_in — wait for animation to complete
-			_card_phase_timer -= delta
-			if _card_phase_timer <= 0.0:
-				_card_state = 2  # inspection
-				_card_input_guarded = false
-				_update_card_visuals()
-		2:  # inspection — input handled by _unhandled_input and mouse signals
-			# Fallback for window/input backends that drop edge events: the current Slice B
-			# has one card, so a physical 1 press remains unambiguous and guarded.
-			if qa_auto_select and not _card_input_guarded:
-				_card_input_mode = "qa_auto"
-				_select_upgrade_card(mini(qa_select_index, _upgrade_cards.size() - 1))
-			elif not _card_input_guarded:
-				# Poll fallback for all numbered cards; edge input remains handled below.
-				if Input.is_key_pressed(KEY_1): _select_upgrade_card(0)
-				elif Input.is_key_pressed(KEY_2): _select_upgrade_card(1)
-				elif Input.is_key_pressed(KEY_3): _select_upgrade_card(2)
-		3:  # pressed — brief darken
-			_card_phase_timer -= delta
-			if _card_phase_timer <= 0.0:
-				_card_state = 4  # acquired
-				_card_phase_timer = 0.6
-				_update_card_visuals()
-				# Update acquired text.
-				var sel_idx: int = _card_selected_idx
-				if sel_idx >= 0 and sel_idx < _upgrade_cards.size():
-					var card_data: Dictionary = _upgrade_cards[sel_idx]
-					var card_node: Dictionary = _card_nodes[sel_idx]
-					if is_instance_valid(card_node.keyword):
-						card_node.keyword.text = card_data["keyword"] + " — 获得"
-				_upgrade_prompt_label.text = _upgrade_phase + " 已获得" if _upgrade_phase == "pierce" else "扇裂 已获得"
-		4:  # acquired — show confirmation
-			_card_phase_timer -= delta
-			if _card_phase_timer <= 0.0:
-				_card_state = 5  # transition_out
-				_card_phase_timer = 0.2
-				_animate_cards_out()
-		5:  # transition_out — wait for animation
-			_card_phase_timer -= delta
-			if _card_phase_timer <= 0.0:
-				_card_state = 0  # hidden
-				_finalize_upgrade()
-
-
-# --- B2: select a card (called from input handlers; transitions to pressed state) ---
-func _select_upgrade_card(idx: int) -> void:
+		match _card_state:
+			1:  # transition_in — wait for animation to complete
+				_card_phase_timer -= delta
+				if _card_phase_timer <= 0.0:
+					_set_upgrade_ui(true, _upgrade_phase, 2, _card_selected_idx, false)
+					_update_card_visuals()
+			2:  # inspection — input handled by _unhandled_input and mouse signals
+				# Poll fallback for window/input backends that drop edge events; every
+				# writer dispatches through choose_upgrade with a distinct source tag.
+				if qa_auto_select and not _card_input_guarded:
+					choose_upgrade(mini(qa_select_index, _upgrade_cards.size() - 1), "qa")
+				elif not _card_input_guarded:
+					if Input.is_key_pressed(KEY_1): choose_upgrade(0, "poll")
+					elif Input.is_key_pressed(KEY_2): choose_upgrade(1, "poll")
+					elif Input.is_key_pressed(KEY_3): choose_upgrade(2, "poll")
+			3:  # pressed — brief darken
+				_card_phase_timer -= delta
+				if _card_phase_timer <= 0.0:
+					_set_upgrade_ui(true, _upgrade_phase, 4, _card_selected_idx, true)
+					_card_phase_timer = 0.6
+					_update_card_visuals()
+					var sel_idx: int = _card_selected_idx
+					if sel_idx >= 0 and sel_idx < _upgrade_cards.size():
+						var card_data: Dictionary = _upgrade_cards[sel_idx]
+						var card_node: Dictionary = _card_nodes[sel_idx]
+						if is_instance_valid(card_node.keyword):
+							card_node.keyword.text = card_data["keyword"] + " — 获得"
+					_upgrade_prompt_label.text = "模块已获得"
+			4:  # acquired — show confirmation
+				_card_phase_timer -= delta
+				if _card_phase_timer <= 0.0:
+					_set_upgrade_ui(true, _upgrade_phase, 5, _card_selected_idx, true)
+					_card_phase_timer = 0.2
+					_animate_cards_out()
+			5:  # transition_out — wait for animation
+				_card_phase_timer -= delta
+				if _card_phase_timer <= 0.0:
+					_set_upgrade_ui(true, _upgrade_phase, 0, _card_selected_idx, false)
+					_finalize_upgrade()
+	
+# upgrade_build_v1: the ONLY selection command. Every input surface (keyboard, mouse,
+# global mouse, polling fallback, QA) dispatches here with its source tag; no other
+# path writes card selection state.
+func choose_upgrade(index: int, source: String = "keyboard") -> void:
 	if _card_state != 2:
 		return
 	if _card_input_guarded:
 		return
-	if idx < 0 or idx >= _upgrade_cards.size():
+	if index < 0 or index >= _upgrade_cards.size():
 		return
-	_card_selected_idx = idx
+	_card_input_mode = source
+	_set_upgrade_ui(true, _upgrade_phase, 3, index, true)
 	# B5: Play card confirm SFX
 	if not self_test_mode:
 		_card_confirm_sfx_player.play()
-	_trigger_upgrade_confirmation(idx)
-	_card_state = 3  # pressed
-	_card_input_guarded = true
+	_trigger_upgrade_confirmation(index)
 	_card_phase_timer = 0.1
 	_update_card_visuals()
-	print("[B2-UPGRADE] card selected idx=%d phase=%s" % [idx, _upgrade_phase])
+	print("[B2-UPGRADE] card selected idx=%d phase=%s source=%s" % [index, _upgrade_phase, source])
 
 
 # --- B2: finalize upgrade after acquired feedback + dismiss animation ---
 func _finalize_upgrade() -> void:
 	var idx: int = _card_selected_idx
 	if idx < 0 or idx >= _upgrade_cards.size():
-		_upgrade_pending = false
+		_set_upgrade_ui(false, "", 0, -1, false)
 		return
 	var card: Dictionary = _upgrade_cards[idx]
 	var applied_phase: String = _upgrade_phase
@@ -1634,46 +1659,38 @@ func _finalize_upgrade() -> void:
 	if upgrade_fb["upgrade_fired"]:
 		print("[B2-UPGRADE] applied phase=%s card=%d max_targets=%d fan_arcs=%d" % [
 			applied_phase, card["id"], upgrade_fb.get("attack_max_targets", 1), upgrade_fb.get("attack_fan_arcs", 1)])
-		# Apply visual effects based on phase.
-		if upgrade_fb["phase"] == "pierce":
-			attack_line.width = 6.0   # wider line for pierce
-			if _attack_glow_line:
-				_attack_glow_line.width = 18.0   # proportionally wider glow
-		elif upgrade_fb["phase"] == "fan":
-			_fan_left_line.visible = true
-			_fan_right_line.visible = true
-			if _fan_left_glow_line:
-				_fan_left_glow_line.visible = true
-				_fan_right_glow_line.visible = true
+	# Apply visual effects based on phase (glow width only; the core line width below
+	# derives from the authoritative rank after the build mutation).
+	if upgrade_fb["phase"] == "pierce":
+		if _attack_glow_line:
+			_attack_glow_line.width = 18.0   # proportionally wider glow
+	elif upgrade_fb["phase"] == "fan":
+		_fan_left_line.visible = true
+		_fan_right_line.visible = true
+		if _fan_left_glow_line:
+			_fan_left_glow_line.visible = true
+			_fan_right_glow_line.visible = true
 	# B5: Play upgrade applied SFX
 	if not self_test_mode:
 		_upgrade_sfx_player.stream = preload("res://assets/audio/upgrade_applied.wav")
 		_upgrade_sfx_player.play()
-		# Mark phase as complete.
-		if _upgrade_phase == "build_choice":
-			active_build = applied_phase
-			build_rank = 1
-			_upgrade_first_done = true
-		elif applied_phase == active_build:
-			build_rank = min(build_rank + 1, 3)
-		if applied_phase == "pierce":
-			rail_pierce_active = true
-			attack_line.width = minf(10.0, attack_line.width + 1.5)
-		elif applied_phase == "fan":
-			_upgrade_second_done = true
-			scatter_fan_active = true
-		elif applied_phase == "pulse":
-			kinetic_pulse_active = true
-		# Hide all card UI.
+	# Build mutation goes ONLY through the authoritative build setter (single writer).
+	if _upgrade_phase == "build_choice":
+		_set_build(applied_phase, 1)
+	elif applied_phase == active_build and active_build != "":
+		_set_build(active_build, build_rank + 1)
+	# Presentation widths derive from the authoritative rank read model.
+	if active_build == "pierce":
+		attack_line.width = clampf(6.0 + 1.5 * float(build_rank - 1), 3.0, 10.0)
+	# Hide all card UI.
 	_upgrade_prompt_label.visible = false
 	for c in _card_nodes:
 		if is_instance_valid(c.bg):
 			c.bg.visible = false
 	for cl in _upgrade_card_labels:
 		cl.visible = false
-	_upgrade_pending = false
-	_card_input_guarded = false
-	print("[B2-UPGRADE] window closed; combat resumed")
+	_set_upgrade_ui(false, "", 0, -1, false)
+	print("[B2-UPGRADE] window closed; combat resumed build=%s rank=%d" % [active_build, build_rank])
 
 
 # --- B2 visual helper: build quadratic-bezier arc points for fan curvature ---
@@ -1695,6 +1712,10 @@ func _build_arc_points(start: Vector2, end: Vector2, offset_sign: float, num_poi
 
 func _process(delta: float) -> void:
 	if _paused:
+		# The result overlay pauses the tree; the deterministic regression still needs to
+		# drive its restart phase (the interactive R path runs through _unhandled_key_input).
+		if self_test_mode and _in_result:
+			_self_test_step()
 		return
 	var _t0: int = Time.get_ticks_usec()   # perf probe: frame script time
 	# Fixed-step session tick (60Hz): tick-based timing (run duration, upgrade windows) stays
@@ -2260,7 +2281,7 @@ func _play_kill_dissolve(node: Node2D) -> void:
 func _emit_clear_effect() -> void:
 	if _clear_effect_tween:
 		_clear_effect_tween.kill()
-	if _upgrade_first_done and not _upgrade_second_done and _pierce_clear_line:
+	if active_build == "pierce" and _pierce_clear_line:
 		_pierce_clear_line.points = PackedVector2Array([position + Vector2(-320, 0), position + Vector2(320, 0)])
 		_pierce_clear_line.visible = true
 		_pierce_clear_line.width = 2.0
@@ -2271,7 +2292,7 @@ func _emit_clear_effect() -> void:
 		_clear_effect_tween.tween_property(_pierce_clear_line, "default_color:a", 0.0, 0.48).set_delay(0.08).set_ease(Tween.EASE_IN)
 		_clear_effect_tween.chain().tween_callback(func(): _pierce_clear_line.visible = false)
 		dbg_verbose("[VFX][B2-PIERCE-CLEAR] horizontal core -> widening corridor -> open space (0.48s)")
-	elif _upgrade_second_done and _fan_clear_line and _fan_clear_left_line and _fan_clear_right_line:
+	elif active_build == "fan" and _fan_clear_line and _fan_clear_left_line and _fan_clear_right_line:
 		var fan_mid_end := position + Vector2.RIGHT * 300.0
 		var fan_left_end := position + Vector2.RIGHT.rotated(-0.52) * 300.0
 		var fan_right_end := position + Vector2.RIGHT.rotated(0.52) * 300.0
@@ -2501,10 +2522,14 @@ func qa_state_snapshot() -> Dictionary:
 			})
 	return {
 		"tick": session.current_tick(),
+		"run_id": session.run_id,
 		"spawn_grace_remaining": spawn_grace_remaining,
 		"qa_hold_grace": qa_hold_grace,
 		"in_result": _in_result,
 		"result_state": _result_state,
+		"progression_state": progression_state.duplicate(),
+		"build_state": build_state.duplicate(),
+		"upgrade_ui_state": upgrade_ui_state.duplicate(),
 		"nodes": nodes,
 		"hud": hud_nodes,
 	}
@@ -2582,16 +2607,22 @@ func _self_test_step() -> void:
 		if self_test_t > 500:
 			print("[SELF-TEST-TERMINAL-FAIL] life not depleted; segments_lost=%d outcome=%s" % [lost, outcome])
 			get_tree().quit(1)
-	elif not _in_result:
-		# The runtime will enter the result phase on the next _process top (via _enter_result_if_needed). Wait here.
+	elif not self_test_seen_result and not _in_result:
+		# The runtime will enter the result phase on the next _process top. Wait here.
+		return
+	elif not self_test_seen_result:
+		# Result phase entered: observe it once (input lock + readable non-color RESULT).
+		self_test_seen_result = true
+		if _result_state == "defeat":
+			print("[SELF-TEST-RESULT] defeat result entered (input locked; readable non-color RESULT)")
+		return
+	elif _in_result:
+		# The result now waits for an explicit player R press (no automatic reset); the
+		# headless regression drives the SAME canonical restart command the R key dispatches.
+		_auto_restart()
 		return
 	else:
-		# Result phase active: when the auto-restart fires (_in_result cleared), verify the fresh run has no cross-run loss.
-		if self_test_seen_result and not _in_result:
-			print("[SELF-TEST-RESTART-PASS] new run segments_lost=%d (no cross-run loss) -> terminal/reset regression PASS" % int(session.rules_state.get("segments_lost", 0)))
-			get_tree().quit(0)
-		if not self_test_seen_result:
-			self_test_seen_result = true
-			if _result_state == "defeat":
-				print("[SELF-TEST-RESULT] defeat result entered (input locked; readable non-color RESULT)")
+		# Restart fired after the observed result: verify the fresh run carries no cross-run loss.
+		print("[SELF-TEST-RESTART-PASS] new run segments_lost=%d (no cross-run loss) -> terminal/reset regression PASS" % int(session.rules_state.get("segments_lost", 0)))
+		get_tree().quit(0)
 		return
