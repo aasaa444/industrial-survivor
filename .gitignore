@@ -23,7 +23,8 @@ godot_game_dev/.gdmcp/bin/
 /web/
 /export/
 */build/
-*/export_presets.cfg
+# export_presets.cfg IS tracked (P6 authorized export config); only build output stays out
+!godot_game_dev/export_presets.cfg
 
 # ---- Godot translation/import caches (safe to regenerate) ----
 *.tmp

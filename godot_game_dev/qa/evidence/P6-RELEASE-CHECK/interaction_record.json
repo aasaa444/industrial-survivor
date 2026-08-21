@@ -1,0 +1,47 @@
+{
+  "schema_version": "p6-release-check-v1",
+  "steps": [
+    {
+      "step": "first_screen_3s",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P6-RELEASE-CHECK\\first_screen_3s.png",
+      "sha256": "bd9aa235c312a86977ebf0e536c06b9cb5798cc06e26003086227e00bf3c86b5"
+    },
+    {
+      "step": "movement_feedback",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P6-RELEASE-CHECK\\movement_feedback.png",
+      "sha256": "6fbecd52b6f8729cb34e59b58ab838ecca75ff2e4e773adc593421d0796c24b5"
+    },
+    {
+      "step": "upgrade_window_3cards",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P6-RELEASE-CHECK\\upgrade_window_3cards.png",
+      "sha256": "5b8cc8994833a9c76471494e29168966de57c7580b795f3eabee1d7cc8671893"
+    },
+    {
+      "step": "card3_selected",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P6-RELEASE-CHECK\\card3_selected.png",
+      "sha256": "1d7e0d8ebf6febfe559923e8f9a7c0d7a924d854d3aef58700e6ac5eff3340c2"
+    },
+    {
+      "step": "second_window",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P6-RELEASE-CHECK\\second_window.png",
+      "sha256": "36f04fc2bb50084e812630d1cedaa5b2b57d66949e304c68c793544ea42d3151"
+    },
+    {
+      "step": "rank2_combat",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P6-RELEASE-CHECK\\rank2_combat.png",
+      "sha256": "db39600d04c930eb807c3e6f2e7c0ddeba86761664acad73de89fcbe8b28e1a4"
+    },
+    {
+      "step": "pause_overlay",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P6-RELEASE-CHECK\\pause_overlay.png",
+      "sha256": "a070d65cdece4f5ed5672d3f1af576ae641b6dc7d199c9d1bb9bc1aa42b1c73f"
+    },
+    {
+      "step": "restart_fresh",
+      "capture": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\P6-RELEASE-CHECK\\restart_fresh.png",
+      "sha256": "1a098b3b8261a4324ceac4dcbfb00236fbd90645e387213000c7d4ca0aec62f0"
+    }
+  ],
+  "status": "passed",
+  "movement_diff_pct": 50.61726087216606
+}
