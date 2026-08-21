@@ -153,9 +153,13 @@ var scatter_fan_active: bool = false
 var kinetic_pulse_active: bool = false
 var active_build: String = ""
 var build_rank: int = 0
+var run_kills: int = 0
+var _paused: bool = false
+var _pause_layer: CanvasLayer
+var _pause_title: Label
 var _pulse_flash_remaining: float = 0.0
 var _pulse_flash_radius: float = 0.0
-var energy_cores: Array = []  # [{node: Polygon2D, active: bool}]; bounded visual object pool
+var energy_cores: Array = []
 var xp_label: Label
 
 # B5: Arena background
@@ -248,6 +252,7 @@ const VFX_RUST_DARK: Color = Color(0.55, 0.22, 0.10)    # #8b3a1a - deep rust
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	session = SESSION.new(2026)
 	_self_test_mode_detect()
 
@@ -389,8 +394,84 @@ func _toggle_sfx_mute() -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_M:
-		_toggle_sfx_mute()
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_M:
+			_toggle_sfx_mute()
+		elif event.keycode == KEY_ESCAPE and not _in_result and not _upgrade_pending:
+			_toggle_pause()
+		elif event.keycode == KEY_R and _in_result:
+			_auto_restart()
+
+
+func _build_result_overlay() -> void:
+	_result_panel = Panel.new()
+	_result_panel.name = "RunResultPanel"
+	_result_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_result_panel.size = Vector2(520, 300)
+	_result_panel.position -= _result_panel.size * 0.5
+	_result_panel.add_theme_stylebox_override("panel", _ui_panel_style(Color(0.03, 0.04, 0.06, 0.96), Color(0.25, 0.8, 0.95, 0.8), 2, 8))
+	_result_panel.visible = false
+	_pause_layer.add_child(_result_panel)
+	_result_title = Label.new()
+	_result_title.position = Vector2(24, 28)
+	_result_title.size = Vector2(472, 60)
+	_result_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_result_title.add_theme_font_size_override("font_size", 30)
+	_result_panel.add_child(_result_title)
+	_result_detail = Label.new()
+	_result_detail.position = Vector2(24, 100)
+	_result_detail.size = Vector2(472, 90)
+	_result_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_result_detail.add_theme_font_size_override("font_size", 18)
+	_result_panel.add_child(_result_detail)
+	_result_countdown = Label.new()
+	_result_countdown.position = Vector2(24, 220)
+	_result_countdown.size = Vector2(472, 40)
+	_result_countdown.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_result_countdown.text = "R 重新开始"
+	_result_countdown.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
+	_result_panel.add_child(_result_countdown)
+
+
+func _show_result_overlay() -> void:
+	if not _result_panel:
+		return
+	_result_panel.visible = true
+	_pause_layer.visible = true
+	_result_title.text = "胜利" if _result_state == "victory" else "失败"
+	_result_detail.text = "时间  %02d:%02d\n等级  %d\n击杀  %d\n构筑  %s" % [int(session.current_tick() / 60), int(session.current_tick()) % 60, player_level, run_kills, (active_build if active_build != "" else "基础模块")]
+	get_tree().paused = true
+
+
+func _toggle_pause() -> void:
+	_paused = not _paused
+	if _pause_layer:
+		_pause_layer.visible = _paused
+	get_tree().paused = _paused
+
+
+func _build_pause_overlay() -> void:
+	_pause_layer = CanvasLayer.new()
+	_pause_layer.layer = 30
+	_pause_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(_pause_layer)
+	var shade := ColorRect.new()
+	shade.color = Color(0.02, 0.03, 0.04, 0.82)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pause_layer.add_child(shade)
+	_pause_title = Label.new()
+	_pause_title.text = "已暂停\n\nESC 继续    R 重开"
+	_pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pause_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_pause_title.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_pause_title.size = Vector2(360, 150)
+	_pause_title.position -= _pause_title.size * 0.5
+	_pause_title.add_theme_font_size_override("font_size", 24)
+	_pause_title.add_theme_color_override("font_color", Color(0.9, 0.94, 1.0))
+	_pause_layer.add_child(_pause_title)
+	_build_result_overlay()
+	_pause_layer.visible = false
 
 
 func _new_enemy_node(pos: Vector2, hp: int, color: Color, enemy_type: String = "walker") -> Node2D:
@@ -720,6 +801,8 @@ func _build_visuals(for_self_test: bool) -> void:
 		_card_hud.add_child(cl)
 		_upgrade_card_labels.append(cl)
 
+		_build_pause_overlay()
+
 	# B2 fan arc glow lines (behind the core fan lines, wider + semi-transparent).
 	_fan_left_glow_line = Line2D.new()
 	_fan_left_glow_line.width = 6.0
@@ -860,19 +943,9 @@ func _apply_light_separation(victim_id: int, on_screen: Array) -> void:
 # is presented (readable, non-color), and after the short candidate result duration the runtime triggers the canonical
 # automatic immediate reset (session.reset(): run identity advances, RNG reseeded, clean rules state) + fresh enemies.
 func _handle_result_phase(delta: float) -> void:
-	if result_label:
-		result_label.visible = true
-		if _result_state == "defeat":
-			result_label.text = "RESULT: 失败 —— 生命耗尽（任意键立即重试）"
-		elif _result_state == "victory":
-			result_label.text = "RESULT: 胜利 —— 成功存活！"
-		else:
-			result_label.text = "RESULT: ..."
-	# Result/input lock: suppress gameplay presentation detail during the terminal result (presentation reads only the
-	# locked result — no re-arbitration, no new combat state), then count down to the automatic immediate retry.
-	_result_remaining -= delta
-	if _result_remaining <= 0.0:
-		_auto_restart()
+	_show_result_overlay()
+	# Result remains visible until the player explicitly presses R; no automatic reset.
+	_result_remaining = 999999.0
 
 
 # --- T4: canonical automatic immediate reset (immediate retry, no out-of-run loss) ---
@@ -894,6 +967,7 @@ func _auto_restart() -> void:
 	player_xp = 0
 	active_build = ""
 	build_rank = 0
+	run_kills = 0
 	rail_pierce_active = false
 	for core in energy_cores:
 		if is_instance_valid(core.node): core.node.visible = false
@@ -908,9 +982,11 @@ func _auto_restart() -> void:
 	_in_result = false
 	_result_state = ""
 	_result_remaining = 0.0
-	if result_label:
-		result_label.text = ""
-		result_label.visible = false
+	if _result_panel:
+		_result_panel.visible = false
+	if _pause_layer:
+		_pause_layer.visible = false
+	get_tree().paused = false
 	# Reset B2 upgrade runtime state.
 	_upgrade_pending = false
 	_upgrade_phase = ""
@@ -1568,6 +1644,8 @@ func _build_arc_points(start: Vector2, end: Vector2, offset_sign: float, num_poi
 
 
 func _process(delta: float) -> void:
+	if _paused:
+		return
 	var _t0: int = Time.get_ticks_usec()   # perf probe: frame script time
 	# Fixed-step session tick (60Hz): tick-based timing (run duration, upgrade windows) stays
 	# frame-rate independent. Was per-frame advance_tick, which made 4800 ticks last ~33s at 144Hz.
@@ -2280,24 +2358,25 @@ func _apply_feedback(result: Dictionary, on_screen: Array) -> void:
 				_enemy_death_sfx_player.pitch_scale = clampf(1.0 + _kill_streak * 0.03, 1.0, 1.3) * randf_range(0.9, 1.1)
 				_enemy_death_sfx_player.play()
 		dbg_verbose("[FB-BIND] kill=%s (emitted only while kill_outcomes non-empty)" % str(fb["kill"]))
-	for kid in fb["kill"]:
-		dbg_verbose("[KILL] id=%d died -> kill tween (scale+fade)" % kid)
-		for e in on_screen:
-			if e.stable_id == kid and is_instance_valid(e.node):
-				# Death -> energy core drop (Slice B reward loop).
-				if not self_test_mode and is_instance_valid(e.node):
-					_spawn_energy_core(e.node.position)
-				if not self_test_mode:
-					# Crack-collapse / dissolve: asymmetric squash, rotation, then fade.
-					_play_kill_dissolve(e.node)
-				else:
-					e.node.queue_free()
-				# Remove the dead runtime record immediately; live cap and perf metrics must
-				# describe live entities, not the entire kill history.
-				enemies.erase(e)
-				break
+		for kid in fb["kill"]:
+			run_kills += 1
+			dbg_verbose("[KILL] id=%d died -> kill tween (scale+fade)" % kid)
+			for e in on_screen:
+				if e.stable_id == kid and is_instance_valid(e.node):
+					# Death -> energy core drop (Slice B reward loop).
+					if not self_test_mode and is_instance_valid(e.node):
+						_spawn_energy_core(e.node.position)
+					if not self_test_mode:
+						# Crack-collapse / dissolve: asymmetric squash, rotation, then fade.
+						_play_kill_dissolve(e.node)
+					else:
+						e.node.queue_free()
+					# Remove the dead runtime record immediately; live cap and perf metrics must
+					# describe live entities, not the entire kill history.
+					enemies.erase(e)
+					break
 			_emit_clear_effect()
-		dbg_verbose("[CLEAR] enemy id=%d cleared from play" % kid)
+			dbg_verbose("[CLEAR] enemy id=%d cleared from play" % kid)
 	if not fb["kill"].is_empty():
 		var remaining: int = 0
 		for e in on_screen:
