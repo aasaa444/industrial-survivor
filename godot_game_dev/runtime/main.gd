@@ -74,6 +74,21 @@ const SESSION = preload("res://rules/session.gd")
 const DEBUG_VERBOSE := false
 const DEBUG_HUD := false
 
+# CP1 UI tokens: restrained industrial surfaces with cyan reserved for player/reward feedback.
+const UI_VOID := Color("#1a1a1e")
+const UI_SHADOW := Color("#252528")
+const UI_STEEL := Color("#3d3d42")
+const UI_RUST := Color("#8b3a1a")
+const UI_RUST_BRIGHT := Color("#b85c2e")
+const UI_BONE := Color("#c4b8a8")
+const UI_MUTED := Color("#8c877d")
+const UI_CYAN := Color("#00e5ff")
+const UI_CYAN_DARK := Color("#00838f")
+const UI_PURPLE := Color("#d500f9")
+const UI_YELLOW := Color("#ffd600")
+const UI_PANEL_RADIUS := 6
+const UI_SAFE_MARGIN := 18.0
+
 
 # Debug-verbose log sink (keeps runtime output free of per-frame flood; set DEBUG_VERBOSE=true to re-enable).
 func dbg_verbose(message: String) -> void:
@@ -113,6 +128,15 @@ var invalidation_label: Label
 var no_target_label: Label
 var contact_label: Label
 var result_label: Label
+var _hud_root: Control
+var _hud_progress: ProgressBar
+var _hud_build_badge: Label
+var _hud_level_label: Label
+var _hud_life_segments: Array[Label] = []
+var _result_panel: Panel
+var _result_title: Label
+var _result_detail: Label
+var _result_countdown: Label
 var enemies: Array = []          # [{node, stable_id, hp, hit_flash}]
 var next_stable_id: int = 1
 
@@ -460,6 +484,35 @@ func _update_growth_hud() -> void:
 			xp_label.text = "能量  [" + "#".repeat(filled) + "-".repeat(max(0, next_threshold - filled)) + "]  %d/%d" % [filled, next_threshold]
 		else:
 			xp_label.text = "能量  已满  %d" % player_xp
+
+
+func _ui_panel_style(fill: Color, border: Color, width: int = 1, radius: int = UI_PANEL_RADIUS) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.border_width_left = width
+	style.border_width_right = width
+	style.border_width_top = width
+	style.border_width_bottom = width
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_left = radius
+	style.corner_radius_bottom_right = radius
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.28)
+	style.shadow_size = 5
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	return style
+
+
+func _ui_label(text_value: String, size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text_value
+	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_color_override("font_color", color)
+	return label
 
 
 func _build_visuals(for_self_test: bool) -> void:
@@ -1013,6 +1066,7 @@ func _build_card_widget(idx: int, cx: float, cy: float, w: float, h: float) -> D
 func _update_card_visuals() -> void:
 	if _card_state == 0:
 		return
+	_sync_upgrade_card_visibility()
 	for i in range(3):
 		var card: Dictionary = _card_nodes[i]
 		var bg: TextureRect = card.bg
@@ -1142,12 +1196,28 @@ func _apply_card_style(bg: TextureRect, kw: Label, diff: Label, eff: Label, idx:
 
 
 # --- B2 card animation: appear (transition_in, 200ms) ---
+func _sync_upgrade_card_visibility() -> void:
+	var available: int = _upgrade_cards.size()
+	for i in range(_card_nodes.size()):
+		var card: Dictionary = _card_nodes[i]
+		var bg: TextureRect = card.bg
+		if not is_instance_valid(bg):
+			continue
+		var shown: bool = i < available
+		bg.visible = shown
+		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE if not shown else Control.MOUSE_FILTER_STOP
+		if not shown:
+			_card_hovered_idx = -1 if _card_hovered_idx == i else _card_hovered_idx
+
+
 func _animate_cards_in() -> void:
 	var backdrop := _card_hud.get_node_or_null("CardBackdrop") as ColorRect
 	if backdrop:
 		backdrop.visible = true
 		var bt := create_tween()
 		bt.tween_property(backdrop, "color", Color(0.0, 0.0, 0.0, 0.25), 0.2).set_ease(Tween.EASE_OUT)
+	# One authoritative sync before layout/animation: card visibility and hit eligibility match the pool.
+	_sync_upgrade_card_visibility()
 	# A single build-upgrade card is centered in the viewport; the initial build choice uses the row.
 	if _upgrade_cards.size() == 1:
 		var only_bg: TextureRect = _card_nodes[0].bg
