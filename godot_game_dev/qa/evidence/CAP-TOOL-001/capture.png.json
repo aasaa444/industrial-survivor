@@ -1,0 +1,34 @@
+{
+  "schema_version": "capture-window-v1",
+  "pid": 17568,
+  "title": "godot_game_dev (DEBUG)",
+  "window_rect": [
+    696,
+    345,
+    1864,
+    1032
+  ],
+  "project_root": "D:\\Game\\New_Game\\godot_game_dev",
+  "output": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\CAP-TOOL-001\\capture.png",
+  "scenario": "tool_factory_smoke",
+  "state": "current_combat",
+  "action": "idle_after_launch",
+  "git_sha": "b98d99604e87a4616df16e25fb6bc674573dacf1",
+  "will_mutate_project": false,
+  "captured_at_utc": "2026-08-21T04:44:02.111787+00:00",
+  "image_size": [
+    1168,
+    687
+  ],
+  "average_rgb": [
+    91,
+    73,
+    59
+  ],
+  "sha256": "7bfd2282fc909c9e103609d58b4c692c438066ebd724299a8fba7a269c71787c",
+  "capture_route": "native_window_diagnostic",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "python": "3.14.0",
+  "pillow": "12.1.0",
+  "evidence_boundary": "visible pixels/window identity only; runtime domain state unproven"
+}

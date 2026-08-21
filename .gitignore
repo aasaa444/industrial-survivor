@@ -59,3 +59,14 @@ coverage/
 _archive/
 _phase4_vfx_stage/
 dsh_gdmcp_staging/
+
+# ---- Tooling & Evidence Engineer (2026-08-21) ----
+# Ad-hoc runner/capture logs and legacy free-form screenshots are transient.
+# Formal evidence lives under qa/evidence/<evidence-id>/ and is indexed before commit.
+godot_game_dev/qa/*.log
+godot_game_dev/qa/*.err
+godot_game_dev/qa/*.out
+godot_game_dev/qa/screenshots/
+!godot_game_dev/qa/screenshots/b2_pierce_verification.jpg
+!godot_game_dev/qa/evidence/
+!godot_game_dev/qa/evidence/**

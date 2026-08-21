@@ -39,6 +39,6 @@ $exitCode = [int]$proc.ExitCode
 Write-Output "runner_exit_code=$exitCode"
 if ($exitCode -ne 0) { Fail "gdUnit4 runner failed; stdout: $stdoutLog; stderr: $stderrLog" }
 $summary = (Get-Content $stdoutLog,$stderrLog -Raw)
-if ($summary -notmatch 'Overall Summary:.*60 test cases' -or $summary -notmatch 'Executed test cases\s*:\s*\(60/60\)') { Fail "Expected 60-case suite summary not found; full log: $log" }
+if ($summary -notmatch 'Overall Summary:.*60 test cases' -or $summary -notmatch 'Executed test cases\s*:\s*\(60/60\)') { Fail "Expected 60-case suite summary not found; stdout: $stdoutLog; stderr: $stderrLog" }
 Write-Output 'SUITE_OK_60_OF_60'
 exit 0
