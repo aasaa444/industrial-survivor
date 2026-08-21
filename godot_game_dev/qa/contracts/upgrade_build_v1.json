@@ -1,0 +1,44 @@
+{
+  "schema_version": "integration-contract-v1",
+  "contract_id": "upgrade_build_v1",
+  "project_root": "D:\\Game\\New_Game\\godot_game_dev",
+  "feature": "XP-driven upgrade and build selection",
+  "state_owner": {
+    "name": "ProgressionController",
+    "writers": ["progression_controller"],
+    "readers": ["growth_hud", "upgrade_ui", "weapon_resolver", "combat_presenter", "audio_presenter", "reset_controller"]
+  },
+  "input_entry_points": ["choose_upgrade(index, keyboard)", "choose_upgrade(index, mouse)", "choose_upgrade(index, qa)"],
+  "transaction": [
+    {"id": "trigger", "kind": "input_or_event", "source": "energy_core_collected", "expected": "XP increments exactly once"},
+    {"id": "mutate", "kind": "state", "owner": "ProgressionController", "expected": "level/xp/build/rank authoritative delta"},
+    {"id": "read_model", "kind": "ui", "source": "ProgressionController", "expected": "HUD and UpgradeUI reflect authoritative state"},
+    {"id": "behavior", "kind": "gameplay", "source": "ProgressionController", "expected": "weapon behavior derives from build/rank"},
+    {"id": "feedback", "kind": "vfx_audio", "source": "progression_or_combat_event", "expected": "selection/application feedback occurs once"},
+    {"id": "reset", "kind": "reset", "source": "canonical_reset_controller", "expected": "progression/UI/build reset and run identity advances"}
+  ],
+  "legacy": {
+    "paths": [
+      "_upgrade_first_done",
+      "_upgrade_second_done",
+      "rail_pierce_active",
+      "scatter_fan_active",
+      "kinetic_pulse_active",
+      "fixed_tick_upgrade",
+      "fixed_card_coordinates",
+      "direct_gui_input_selection",
+      "polling_selection_writer"
+    ],
+    "removal_condition": "upgrade_build_v1 migration complete",
+    "proof": "verifier scans staged candidate and runtime evidence"
+  },
+  "acceptance": {
+    "required_step_ids": ["trigger", "mutate", "read_model", "behavior", "feedback", "reset"],
+    "evidence_level": "L2_runtime"
+  },
+  "policy": {
+    "will_mutate_project": true,
+    "staged_only_static_gate": true,
+    "evidence_boundary": "runtime transaction evidence; visual acceptance remains separate"
+  }
+}

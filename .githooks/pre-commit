@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+files="$(git diff --cached --name-only --diff-filter=ACMR)"
+if [[ -z "$files" ]]; then
+  exit 0
+fi
+if ! printf '%s\n' "$files" | grep -Eq '^godot_game_dev/(runtime|scenes|project\.godot|assets|ui)/'; then
+  # Contracts, verifiers, references, and tooling bootstrap the gate itself.
+  # They must be reviewable before the production gate can enforce receipts.
+  exit 0
+fi
+contract="$root/godot_game_dev/qa/contracts/upgrade_build_v1.json"
+if [[ ! -f "$contract" ]]; then
+  printf 'COMMIT BLOCKED: cross-surface staged change has no integration contract\n' >&2
+  exit 2
+fi
+python "$root/godot_game_dev/tools/verify_integration_contract.py" \
+  --project-root "$root" \
+  --contract "$contract" \
+  --dry-run >/dev/null
+if [[ "${INTEGRATION_GATE_RECEIPT:-}" != "passed" ]]; then
+  printf 'COMMIT BLOCKED: set INTEGRATION_GATE_RECEIPT=passed only after runtime transaction evidence is reviewed\n' >&2
+  exit 2
+fi
+printf 'INTEGRATION_GATE_OK\n'
