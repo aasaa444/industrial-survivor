@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $Runner = 'res://addons/gdUnit4/bin/GdUnitCmdTool.gd'
-$Tests = @('res://test/adapter_contract_test.gd','res://test/rules_core_test.gd')
+$Tests = @('res://test/adapter_contract_test.gd','res://test/rules_core_test.gd','res://test/weapon_catalog_test.gd','res://test/multi_weapon_foundation_test.gd','res://test/multi_weapon_adapter_catalog_test.gd')
 $GodotArgs = @('--headless','--path',$ProjectRoot,'-s',$Runner,'--ignoreHeadlessMode')
 foreach ($test in $Tests) { $GodotArgs += @('--add',$test) }
 $GodotArgs += @('--report-directory',$ReportDirectory)
