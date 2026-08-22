@@ -1,0 +1,29 @@
+{
+	"candidate_sha": "31a53fa89c2c4e6cfa76e514a3fb5b92c3ccdf58",
+	"contract_id": "multi_weapon_loadout_foundation_v1",
+	"evidence": [
+		{
+			"does_not_prove": "runtime player path",
+			"level": "L1",
+			"path": "user://mw-foundation-final/report_1/results.xml",
+			"proves": "loadout offers, attack identity helper, Arc trace identity, cross-attack invalid/no-hit, reset"
+		},
+		{
+			"does_not_prove": "Rail->Arc mixed Main transaction; existing Arc-only fixture was not reused",
+			"level": "L2",
+			"path": "none",
+			"proves": "none"
+		}
+	],
+	"milestone_acceptance_authority": "user",
+	"next_safe_action": "Extend QA viewport fixture and Runtime scheduler to drive Rail->Arc->Rail R2 with per-slot attack transactions, then capture a new candidate-bound L2 artifact",
+	"schema_version": "integration-receipt-v1",
+	"slice_id": "MW-FOUNDATION-001",
+	"status": "mechanically_verified",
+	"verification": {
+		"l1_exit_code": 0,
+		"l1_suite": "82/82",
+		"runtime_self_test": "passed",
+		"runtime_self_test_input": "disabled"
+	}
+}

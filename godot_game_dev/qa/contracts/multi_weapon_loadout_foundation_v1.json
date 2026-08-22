@@ -1,0 +1,101 @@
+{
+	"candidate": {
+		"base_sha": "31a53fa89c2c4e6cfa76e514a3fb5b92c3ccdf58",
+		"binding": "current workspace candidate; exact post-change SHA requires commit/stage before acceptance"
+	},
+	"contract_id": "multi_weapon_loadout_foundation_v1",
+	"does_not_prove": [
+		"user acceptance",
+		"player experience",
+		"complete MW-3 runtime scheduling",
+		"native foreground pixels",
+		"complete M4 content",
+		"20-minute balance"
+	],
+	"player_promise": "In one run, retain Rail Pierce, add Arc Coil, observe two independent weapon slots and attack identities, then reset cleanly into a new run.",
+	"policy": {
+		"real_input_default": "disabled",
+		"rollback": "return to last mechanically verified boundary through project-local GDMCP",
+		"staged_only_static_gate": true,
+		"will_mutate_project": true
+	},
+	"project_root": "D:/Game/New_Game/godot_game_dev",
+	"schema_version": "integration-contract-v1",
+	"scope": {
+		"excluded": [
+			"furnace_orb",
+			"rocket_launcher",
+			"drone",
+			"manual_aim",
+			"complete_20_minute_balance"
+		],
+		"initial_choices": 3,
+		"max_slots_candidate": 4,
+		"weapons": [
+			"rail_pierce",
+			"arc_coil"
+		]
+	},
+	"slice_id": "MW-FOUNDATION-001",
+	"state_owner": {
+		"readers": [
+			"rules_core",
+			"adapter",
+			"HUD",
+			"VFX",
+			"SFX",
+			"QA capture"
+		],
+		"writers": [
+			"runtime/main.gd loadout_state through canonical loadout command"
+		]
+	},
+	"status": "mechanically_verified",
+	"transaction": [
+		{
+			"expected": "run-scoped offer identity is created",
+			"id": "trigger"
+		},
+		{
+			"expected": "add/upgrade changes only its target slot",
+			"id": "mutate"
+		},
+		{
+			"expected": "each slot projects icon/name/rank/cooldown",
+			"id": "read_model"
+		},
+		{
+			"expected": "each due slot emits independent attack identity",
+			"id": "behavior"
+		},
+		{
+			"expected": "feedback carries attack_id and slot_id",
+			"id": "feedback"
+		},
+		{
+			"expected": "loadout/offers/transactions/traces/transient effects clear and run_id advances",
+			"id": "reset"
+		}
+	],
+	"verification": {
+		"l1": {
+			"errors": 0,
+			"failures": 0,
+			"godot": "4.7.1-stable",
+			"status": "passed",
+			"test_cases": 82
+		},
+		"l2": {
+			"reason": "existing runtime_capture fixture is Arc-only and does not drive Rail->Arc mixed loadout or per-slot runtime attack scheduling",
+			"status": "blocked"
+		},
+		"l3": {
+			"reason": "no attended foreground input authorization and no valid paired native route for this Slice",
+			"status": "not_run"
+		},
+		"runtime_self_test": {
+			"scope": "legacy deterministic combat/contact/terminal/reset; not player evidence",
+			"status": "passed"
+		}
+	}
+}
