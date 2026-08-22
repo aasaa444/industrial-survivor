@@ -1,0 +1,62 @@
+{
+	"action": "qa_capture choose_upgrade(2) -> three nearby walkers",
+	"alive_enemies": 0,
+	"arc_coil_trace": [
+		{
+			"hop": 0,
+			"id": 1,
+			"source_id": -1
+		},
+		{
+			"hop": 1,
+			"id": 2,
+			"source_id": 1
+		},
+		{
+			"hop": 2,
+			"id": 3,
+			"source_id": 2
+		}
+	],
+	"arc_coil_vfx_nodes": 6,
+	"build": {
+		"active_build": "arc_coil",
+		"enabled": {
+			"arc_coil": true,
+			"fan": false,
+			"pierce": false,
+			"pulse": false
+		},
+		"rank": 1,
+		"weapon_id": "arc_coil"
+	},
+	"camera_position": {
+		"x": 1152.0,
+		"y": 648.0
+	},
+	"candidate_sha": "c272f0e4293e7cd7666fa49a711a27c771edd6362958d04637e7fa6fbfc72542",
+	"capture_id": "m4-arc-coil-final3:viewport",
+	"does_not_prove": "desktop window foreground, title, rect, or player-visible OS composition",
+	"evidence_boundary": "L2 state + internal render frame; native window layer required separately",
+	"progression": {
+		"level": 2,
+		"xp": 10
+	},
+	"project_root": "D:\\Game\\New_Game\\godot_game_dev",
+	"proves": "authoritative Arc Coil chain trace and Godot viewport rendering on the same frame",
+	"recent_input": "qa_capture",
+	"run_id": 1,
+	"scenario": "arc_coil_chain",
+	"schema_version": "runtime-viewport-state-v1",
+	"state": "arc_coil_chain_active",
+	"tick": 166,
+	"transaction_id": "m4-arc-coil-final3",
+	"upgrade_ui": {
+		"card_state": 0,
+		"input_guarded": false,
+		"pending": false,
+		"phase": "",
+		"selected_idx": -1
+	},
+	"viewport_png": "D:/Game/New_Game/godot_game_dev/qa/evidence/M4-ARC-COIL-FINAL3/viewport.png"
+}

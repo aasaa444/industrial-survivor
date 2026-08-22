@@ -1,0 +1,30 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+D3D12 12_0 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 2080 Ti
+
+[START] player entered industrial survivor run
+[TIMING][GRACE-END] tick=60 elapsed=1.000s; combat/session.step now permitted
+[GROWTH] energy_drop at=(1152,648) active_cores=1
+[GROWTH] energy_drop at=(1152,648) active_cores=2
+[GROWTH] energy_drop at=(1152,648) active_cores=3
+[GROWTH] energy_drop at=(1152,648) active_cores=4
+[GROWTH] energy_drop at=(1152,648) active_cores=5
+[GROWTH] energy_drop at=(1152,648) active_cores=6
+[GROWTH] energy_drop at=(1152,648) active_cores=7
+[GROWTH] energy_drop at=(1152,648) active_cores=8
+[GROWTH] energy_drop at=(1152,648) active_cores=9
+[GROWTH] energy_drop at=(1152,648) active_cores=10
+[GROWTH] energy_collected xp=5/10
+[GROWTH] energy_collected xp=10/10
+[M4-UPGRADE] window opened phase=build_choice tick=78 cards=["rail_pierce", "scatter_fan", "arc_coil"]
+[B2-UPGRADE] card selected idx=2 phase=build_choice source=qa_capture
+[M4-UPGRADE] applied weapon=arc_coil rank=1 max_targets=3 fan_arcs=1
+[M4-UPGRADE] window closed; combat resumed weapon=arc_coil legacy=arc_coil rank=1
+[GROWTH] energy_drop at=(1225,648) active_cores=10
+[GROWTH] energy_drop at=(1273,676) active_cores=10
+[GROWTH] energy_drop at=(1313,632) active_cores=10
+[PAIRED-CAPTURE] state=passed tx=m4-arc-coil-final3 png=D:/Game/New_Game/godot_game_dev/qa/evidence/M4-ARC-COIL-FINAL3/viewport.png
+[PAIRED-CAPTURE] RESULT=passed
+WARNING: 6 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 3 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)

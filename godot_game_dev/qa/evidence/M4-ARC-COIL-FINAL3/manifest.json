@@ -1,0 +1,93 @@
+{
+  "schema_version": "runtime-capture-v1",
+  "tool_version": "runtime-capture-v1",
+  "mode": "validate",
+  "project_root": "D:\\Game\\New_Game\\godot_game_dev",
+  "output_dir": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\M4-ARC-COIL-FINAL3",
+  "transaction_id": "m4-arc-coil-final3",
+  "candidate_sha": "c272f0e4293e7cd7666fa49a711a27c771edd6362958d04637e7fa6fbfc72542",
+  "godot": "C:\\Users\\User\\Downloads\\Godot_v4.7.1-stable_win64.exe\\Godot_v4.7.1-stable_win64_console.exe",
+  "capture_routes": [
+    "game_internal_viewport"
+  ],
+  "native_window_route": "separate capture_game_window.py, foreground-protected",
+  "proves": "authoritative Arc Coil chain state + internal viewport frame",
+  "does_not_prove": "foreground native-window pixels or desktop composition",
+  "will_mutate_project": false,
+  "platform": "Windows-10-10.0.19045-SP0",
+  "status": "passed",
+  "captured_at_utc": "2026-08-22T13:36:36.614731+00:00",
+  "viewport_png": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\M4-ARC-COIL-FINAL3\\viewport.png",
+  "state_json": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\M4-ARC-COIL-FINAL3\\state.json",
+  "runtime_log": "D:\\Game\\New_Game\\godot_game_dev\\qa\\evidence\\M4-ARC-COIL-FINAL3\\runtime.log",
+  "viewport_sha256": "0b41fbb19ba66a83e3c9eebb98a7f446ec50a637fa2b036febfc3ee7e55fd178",
+  "state_sha256": "cbfb199688c1bb836bbdff27e86fb8bf0e41d36745a1d2ca48fe2a206e1bc177",
+  "state_summary": {
+    "action": "qa_capture choose_upgrade(2) -> three nearby walkers",
+    "alive_enemies": 0,
+    "arc_coil_trace": [
+      {
+        "hop": 0,
+        "id": 1,
+        "source_id": -1
+      },
+      {
+        "hop": 1,
+        "id": 2,
+        "source_id": 1
+      },
+      {
+        "hop": 2,
+        "id": 3,
+        "source_id": 2
+      }
+    ],
+    "arc_coil_vfx_nodes": 6,
+    "build": {
+      "active_build": "arc_coil",
+      "enabled": {
+        "arc_coil": true,
+        "fan": false,
+        "pierce": false,
+        "pulse": false
+      },
+      "rank": 1,
+      "weapon_id": "arc_coil"
+    },
+    "camera_position": {
+      "x": 1152.0,
+      "y": 648.0
+    },
+    "candidate_sha": "c272f0e4293e7cd7666fa49a711a27c771edd6362958d04637e7fa6fbfc72542",
+    "capture_id": "m4-arc-coil-final3:viewport",
+    "does_not_prove": "desktop window foreground, title, rect, or player-visible OS composition",
+    "evidence_boundary": "L2 state + internal render frame; native window layer required separately",
+    "progression": {
+      "level": 2,
+      "xp": 10
+    },
+    "project_root": "D:\\Game\\New_Game\\godot_game_dev",
+    "proves": "authoritative Arc Coil chain trace and Godot viewport rendering on the same frame",
+    "recent_input": "qa_capture",
+    "run_id": 1,
+    "scenario": "arc_coil_chain",
+    "schema_version": "runtime-viewport-state-v1",
+    "state": "arc_coil_chain_active",
+    "tick": 166,
+    "transaction_id": "m4-arc-coil-final3",
+    "upgrade_ui": {
+      "card_state": 0,
+      "input_guarded": false,
+      "pending": false,
+      "phase": "",
+      "selected_idx": -1
+    },
+    "viewport_png": "D:/Game/New_Game/godot_game_dev/qa/evidence/M4-ARC-COIL-FINAL3/viewport.png"
+  },
+  "negative_checks": [
+    "wrong-sha rejects",
+    "missing-artifact rejects"
+  ],
+  "evidence_boundary": "internal state/render only; pair with native capture for player-visible window evidence",
+  "exit_code": 0
+}
