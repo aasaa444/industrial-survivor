@@ -1,0 +1,46 @@
+{
+  "schema_version": "integration-contract-v1",
+  "contract_id": "arc_coil_m4_v1",
+  "slice_id": "M4-ARC-COIL-001",
+  "status": "building",
+  "project_root": "D:\\Game\\New_Game\\godot_game_dev",
+  "authorization": {
+    "upstream_m4_catalog": "weapon_catalog_m4_v1",
+    "initial_offer_decision": "Rail Pierce, Scatter Fan, Arc Coil; default three choices; Kinetic Pulse excluded from initial offer"
+  },
+  "player_promise": "Arc Coil visibly chains from a first legal locked enemy to later legal enemies in the same immutable snapshot, with a distinct industrial electric identity.",
+  "state_ownership": {
+    "build_writer": "runtime/main.gd _set_build/_reset_build",
+    "combat_legality": "rules/rules_core.gd resolve using immutable target_snapshot_ids",
+    "trace_owner": "rules_core resolution_outcome events with delivery/hop/source_id",
+    "presentation": "runtime/main.gd consumes adapter hit_trace and does not select chain targets"
+  },
+  "delivery_rule": {
+    "direct": "Existing weapons retain direct delivery.",
+    "arc_chain": "The first legal target is hop 0 with source_id -1. Every later legal target within attack_max_targets is a later hop sourced from the immediately previous legal hop. If hop 0 is invalid, no later hop may be created."
+  },
+  "catalog": {
+    "weapon_id": "arc_coil",
+    "behavior_id": "arc_chain",
+    "initial_offer_order": ["rail_pierce", "scatter_fan", "arc_coil"],
+    "retained_but_not_initial_offer": ["kinetic_pulse"],
+    "max_rank": 3
+  },
+  "asset_consumers": {
+    "icon": ["upgrade card", "weapon catalog metadata"],
+    "sfx": ["single attack sound per Arc Coil chain"],
+    "vfx": ["world_root transient Line2D arcs", "canonical reset cleanup"]
+  },
+  "performance_boundary": {
+    "max_visible_chain_segments": 5,
+    "segment_lifetime_seconds": 0.24,
+    "no_persistent_vfx_nodes": true
+  },
+  "reset": "_auto_restart clears Arc Coil build state and all active chain transient nodes.",
+  "evidence": {
+    "l1": ["catalog validation", "rules/adapter trace tests", "resource load validation"],
+    "l2": ["real scene Arc Coil selection", "chain trace with hop 0 and hop 1", "viewport capture bound to candidate identity"],
+    "l3": "Protected native window capture when session lease and foreground identity guard are available.",
+    "does_not_prove": "user acceptance, all M4 weapons/passives, or complete 20-minute build balance"
+  }
+}

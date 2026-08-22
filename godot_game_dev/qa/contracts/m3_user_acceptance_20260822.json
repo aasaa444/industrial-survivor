@@ -1,0 +1,21 @@
+{
+  "schema_version": "user-acceptance-receipt-v1",
+  "receipt_id": "M3-USER-ACCEPTED-20260822",
+  "milestone": "M3 combat feel and VFX",
+  "slice_id": "M3-PULSE-PUSH-VFX-20260822",
+  "decision": "accepted",
+  "acceptance_authority": "user",
+  "recorded_at": "2026-08-22",
+  "accepted_scope": [
+    "Rail Pierce, Scatter Fan, and Kinetic Pulse retain distinct combat feedback",
+    "Kinetic Pulse has a readable ring, directional push trail, and bounded VFX lifecycle"
+  ],
+  "evidence": {
+    "l2_state_render": "res://qa/evidence/M3-PULSE-PUSH-20260822B/manifest.json",
+    "candidate_identity": "3de1fe730975f5e6e9d92c5b61ce4c04f918afc7cae1a70363c411a0d6ec6ef7"
+  },
+  "limits": [
+    "The recorded L2 viewport route does not prove foreground native-window composition.",
+    "This receipt accepts M3 only and does not accept M4 or the 20-minute demo."
+  ]
+}

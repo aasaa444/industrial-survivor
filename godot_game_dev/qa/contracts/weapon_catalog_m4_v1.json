@@ -1,0 +1,39 @@
+{
+  "schema_version": "integration-contract-v1",
+  "contract_id": "weapon_catalog_m4_v1",
+  "slice_id": "M4-BUILD-CATALOG-001",
+  "status": "building",
+  "project_root": "D:\\Game\\New_Game\\godot_game_dev",
+  "authorization": {
+    "charter": "DEVELOPMENT_CHARTER_v2_MATURE_20MIN_VISUAL_FIRST.md",
+    "upstream_m3": "M3-USER-ACCEPTED-20260822"
+  },
+  "player_promise": "The first build selection and every rank upgrade read from a stable weapon definition, and the resulting combat behavior visibly matches that definition.",
+  "state_owner": {
+    "writer": "runtime/main.gd build_state through _set_build/_reset_build",
+    "authoritative_fields": ["weapon_id", "active_build", "rank", "enabled"],
+    "compatibility_mirrors": ["active_build", "build_rank", "rail_pierce_active", "scatter_fan_active", "kinetic_pulse_active"]
+  },
+  "catalog": {
+    "reader": "res://content/weapon_catalog.gd",
+    "stable_order": ["rail_pierce", "scatter_fan", "kinetic_pulse"],
+    "allowed_behavior_ids": ["line_pierce", "fan", "pulse"],
+    "max_rank": 3
+  },
+  "domain_boundary": {
+    "rules_session": "Consumes attack_max_targets through the existing adapter envelope and retains hit legality, damage, and terminal authority.",
+    "runtime": "Resolves catalog metadata into cards, HUD, Pulse spatial parameters, VFX/SFX bindings, and the existing single build writer.",
+    "prohibited": ["Rules must not own card text or asset paths.", "Catalog must not write progression state.", "Runtime must not create a second rules-owned progression state."]
+  },
+  "reset": {
+    "command": "_auto_restart",
+    "expected": "weapon_id, active_build, rank, enabled flags, progression, upgrade UI, and transient VFX are cleared before the next run."
+  },
+  "evidence": {
+    "l1": ["WeaponCatalog validation", "gdUnit4 catalog tests", "GDScript validation"],
+    "l2": ["real-scene QA choice transaction", "real-scene QA rank-up transaction", "deterministic self-test"],
+    "l3": "Protected native-window capture is optional for this unit and cannot be replaced by L1/L2.",
+    "does_not_prove": "M4 acceptance, all eight weapons, twelve passives, or a complete 20-minute build."
+  },
+  "rollback": "Remove the catalog preload and restore the prior B2 hard-coded card/parameter branches only through the project-local GDMCP route."
+}
