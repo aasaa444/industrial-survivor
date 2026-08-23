@@ -2,6 +2,7 @@
 
 | Tool | Owner | Scope | Evidence layer | Self-test | Reference |
 |---|---|---|---|---|---|
+| `project_feedback_loop.py` | Toolchain | GodotMaker-style non-interactive project feedback: current project compile/parse, configured active-scene boot/self-test, optional target command, and unified task receipt; delegates process execution to `background_process.py` | Project compile/active-scene child result; not player proof | `test_project_feedback_loop.py` fake failure propagation | `tools/PROJECT_FEEDBACK_LOOP_REFERENCE_v1.md` |
 | `background_process.py` | Toolchain | Structured, hidden-host launcher for non-interactive GDMCP/headless Godot/CLI commands; preserves logs, exit codes, and session records; force kill disabled | Command/session evidence only | `test_background_process.py` | `tools/BACKGROUND_PROCESS_POLICY.md` |
 | `capture_game_window.py` | Tooling & Evidence | Foreground-protected native DEBUG window pixels + PID/title/rect | Native window identity / visual pixels only | Existing capture smoke; refusal paths are built in | `tools/capture_game_window.py` |
 | `runtime_capture.py` | Tooling & Evidence | QA-owned Arc Coil state-bound Godot viewport capture | L2 state + internal rendering | dry-run, Arc Coil positive, wrong-SHA negative, missing-artifact negative | `tools/RUNTIME_CAPTURE_REFERENCE_v1.md` |

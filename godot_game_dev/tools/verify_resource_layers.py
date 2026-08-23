@@ -13,7 +13,9 @@ def execute(command: list[str], cwd: Path, log_dir: Path, label: str) -> dict:
     stdout = Path(record["stdout"]).read_text(encoding="utf-8", errors="replace")[-2000:]
     stderr = Path(record["stderr"]).read_text(encoding="utf-8", errors="replace")[-2000:]
     return {
-        "exit": record["exit_code"],
+        "exit": record["child_exit_code"],
+        "launcher_exit": record["launcher_exit_code"],
+        "result_source": record.get("result_source"),
         "status": record["status"],
         "stdout": stdout,
         "stderr": stderr,

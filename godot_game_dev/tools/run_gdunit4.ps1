@@ -15,7 +15,7 @@ $Tests = @('res://test/adapter_contract_test.gd','res://test/rules_core_test.gd'
 $GodotArgs = @('--headless','--path',$ProjectRoot,'-s',$Runner,'--ignoreHeadlessMode')
 foreach ($test in $Tests) { $GodotArgs += @('--add',$test) }
 $GodotArgs += @('--report-directory',$ReportDirectory)
-function Fail([string]$Message) { Write-Error $Message; exit 2 }
+function Fail([string]$Message, [int]$ExitCode = 2) { Write-Error $Message; exit $ExitCode }
 function Resolve-Python([string]$Requested) {
   $candidate = $Requested
   if ([string]::IsNullOrWhiteSpace($candidate)) {

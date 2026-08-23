@@ -31,4 +31,4 @@ SUITE_OK_N_OF_N
 
 ## Evidence Boundary
 
-Headless gdUnit proves rules and Adapter contracts only. It cannot prove UI focus, actual keyboard input, runtime resource loading, visual pixels, audio playback, performance, or user experience.
+Headless gdUnit proves rules and Adapter contracts only. It cannot prove UI focus, actual keyboard input, active-scene boot, runtime resource loading, visual pixels, audio playback, performance, or user experience. For runtime-facing changes, run `tools/project_feedback_loop.py` first; this runner is a target test stage, not the project feedback loop itself.

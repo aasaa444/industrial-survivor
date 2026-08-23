@@ -170,6 +170,10 @@ def reconcile(record_path: Path) -> dict[str, Any]:
     except PermissionError:
         record["child_state"] = "identity_unknown"
         record["reconcile_status"] = "identity_unknown"
+    except OSError as error:
+        record["child_state"] = "identity_unknown"
+        record["reconcile_status"] = "identity_unknown"
+        record["reconcile_error"] = str(error)
     record["reconciled_at_utc"] = utc_now()
     write_record(record_path, record)
     return record
