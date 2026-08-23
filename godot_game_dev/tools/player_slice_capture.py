@@ -11,14 +11,18 @@ upgrade windows with REAL keyboard selection through choose_upgrade, pause overl
 and R restart. Emits an interaction record JSON + manifest rows.
 """
 from __future__ import annotations
-import argparse, ctypes, ctypes.wintypes, json, subprocess, sys, time
+import argparse, ctypes, ctypes.wintypes, json, subprocess, sys, time, uuid
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
+
+from candidate_identity import calculate as calculate_candidate_identity
 
 GODOT = Path(r"C:\Users\User\Downloads\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64_console.exe")
 CAPTURE = Path(__file__).resolve().parent / "capture_game_window.py"
 
 user32 = ctypes.windll.user32
-VK = {"ESC": 0x1B, "1": 0x31, "2": 0x32, "3": 0x33, "R": 0x52, "W": 0x57, "A": 0x41, "S": 0x53, "D": 0x44}
+VK = {"ESC": 0x1B, "ENTER": 0x0D, "1": 0x31, "2": 0x32, "3": 0x33, "R": 0x52, "W": 0x57, "A": 0x41, "S": 0x53, "D": 0x44}
 
 INPUT_KEYBOARD = 1
 KEYEVENTF_KEYUP = 0x0002
@@ -44,24 +48,118 @@ class INPUT(ctypes.Structure):
     _anonymous_ = ("u",)
     _fields_ = [("type", ULONG), ("u", _INPUT_UNION)]
 
-def send_key(vk: int, up: bool) -> None:
-    inp = INPUT(type=INPUT_KEYBOARD)
-    inp.ki = _KEYBDINPUT(vk, 0, KEYEVENTF_KEYUP if up else 0, 0, None)
-    n = user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
-    if n != 1:
-        raise RuntimeError(f"SendInput failed for vk={vk:#x} (expected sizeof(INPUT)={ctypes.sizeof(INPUT)})")
+class EnvironmentBlocked(RuntimeError):
+    """Raised before real input can reach a window outside this tool's game session."""
 
-def tap(key: str, hold: float = 0.08) -> None:
-    send_key(VK[key], False)
-    time.sleep(hold)
-    send_key(VK[key], True)
+    def __init__(self, message: str, environment: dict[str, object]):
+        super().__init__(message)
+        self.environment = environment
 
-def hold_keys(keys: list[str], seconds: float) -> None:
-    for k in keys:
-        send_key(VK[k], False)
-    time.sleep(seconds)
-    for k in keys:
-        send_key(VK[k], True)
+
+@dataclass
+class RealInputGuard:
+    hwnd: int
+    game_pid: int
+    console_pid: int | None = None
+    allow_real_input: bool = False
+    window_api: object = user32
+    parent_lookup: Callable[[int], int] | None = None
+    input_sender: Callable[[int, bool], None] | None = None
+    pressed_vks: list[int] = field(default_factory=list)
+    cleanup_receipts: list[dict[str, object]] = field(default_factory=list)
+
+    def _foreground_pid(self, hwnd: int) -> int | None:
+        pid = ctypes.wintypes.DWORD()
+        self.window_api.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        return int(pid.value) if pid.value else None
+
+    def _environment(self) -> dict[str, object]:
+        foreground = int(self.window_api.GetForegroundWindow())
+        return {
+            "expected_hwnd": self.hwnd,
+            "expected_game_pid": self.game_pid,
+            "expected_console_pid": self.console_pid,
+            "actual_foreground_hwnd": foreground,
+            "actual_foreground_pid": self._foreground_pid(foreground) if foreground else None,
+        }
+
+    def assert_ready(self) -> None:
+        environment = self._environment()
+        if not self.allow_real_input:
+            raise EnvironmentBlocked("real OS input requires --allow-real-input", environment)
+        if not self.window_api.IsWindow(self.hwnd) or not self.window_api.IsWindowVisible(self.hwnd):
+            raise EnvironmentBlocked("target game window is no longer valid or visible", environment)
+        if environment["actual_foreground_hwnd"] != self.hwnd:
+            raise EnvironmentBlocked("foreground window changed before input", environment)
+        if self._foreground_pid(self.hwnd) != self.game_pid:
+            raise EnvironmentBlocked("target window PID changed before input", environment)
+        if self.console_pid is not None and self.parent_lookup is not None:
+            if self.parent_lookup(self.game_pid) != self.console_pid:
+                raise EnvironmentBlocked("target game process is no longer owned by this tool", environment)
+
+    def _send_raw(self, vk: int, up: bool) -> None:
+        if self.input_sender is not None:
+            self.input_sender(vk, up)
+            return
+        inp = INPUT(type=INPUT_KEYBOARD)
+        inp.ki = _KEYBDINPUT(vk, 0, KEYEVENTF_KEYUP if up else 0, 0, None)
+        n = self.window_api.SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
+        if n != 1:
+            raise RuntimeError(f"SendInput failed for vk={vk:#x} (expected sizeof(INPUT)={ctypes.sizeof(INPUT)})")
+
+    def send(self, vk: int, up: bool) -> None:
+        self.assert_ready()
+        self._send_raw(vk, up)
+        if up:
+            if vk in self.pressed_vks:
+                self.pressed_vks.remove(vk)
+        else:
+            self.pressed_vks.append(vk)
+
+    def emergency_release(self, reason: str) -> None:
+        environment = self._environment()
+        while self.pressed_vks:
+            vk = self.pressed_vks.pop()
+            receipt = {"event": "emergency_release_after_focus_loss", "vk": vk, "reason": reason, "environment": environment}
+            try:
+                self._send_raw(vk, True)
+                receipt["result"] = "sent"
+            except Exception as error:
+                receipt["result"] = "failed"
+                receipt["error"] = str(error)
+                self.cleanup_receipts.append(receipt)
+                raise RuntimeError("input_cleanup_failed") from error
+            self.cleanup_receipts.append(receipt)
+
+
+def send_key(vk: int, up: bool, guard: RealInputGuard) -> None:
+    guard.send(vk, up)
+
+
+def tap(key: str, guard: RealInputGuard, hold: float = 0.08) -> None:
+    try:
+        send_key(VK[key], False, guard)
+        time.sleep(hold)
+        send_key(VK[key], True, guard)
+    except EnvironmentBlocked as error:
+        guard.emergency_release(str(error))
+        raise
+
+
+def hold_keys(keys: list[str], seconds: float, guard: RealInputGuard, poll_interval: float = 0.1) -> None:
+    try:
+        for key in keys:
+            send_key(VK[key], False, guard)
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            guard.assert_ready()
+            time.sleep(min(poll_interval, max(0.0, deadline - time.monotonic())))
+        for key in reversed(keys):
+            send_key(VK[key], True, guard)
+    except EnvironmentBlocked as error:
+        guard.emergency_release(str(error))
+        raise
+
 
 def child_game_pid(console_pid: int, timeout: float = 20.0) -> int:
     """The console wrapper spawns the real game process; resolve its PID via the
@@ -177,11 +275,12 @@ def wait_for_log_marker(log: Path, marker: str, timeout: float) -> str:
         time.sleep(0.2)
     raise RuntimeError(f"timeout waiting for log marker: {marker}")
 
-def capture(pid: int, out_dir: Path, name: str, scenario: str, state: str, action: str, manifest: Path) -> dict:
+def capture(pid: int, out_dir: Path, name: str, scenario: str, state: str, action: str, manifest: Path, transaction_id: str, candidate_file: Path) -> dict:
     out = out_dir / f"{name}.png"
     r = subprocess.run([sys.executable, str(CAPTURE), "--pid", str(pid), "--output", str(out),
                         "--project-root", str(out_dir), "--scenario", scenario, "--state", state,
-                        "--action", action, "--manifest", str(manifest)],
+                        "--action", action, "--manifest", str(manifest), "--no-focus-steal",
+                        "--transaction-id", transaction_id, "--candidate-identity-file", str(candidate_file)],
                        capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"capture {name} failed: {r.stdout} {r.stderr}")
@@ -191,6 +290,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--project-root", type=Path, required=True)
     ap.add_argument("--out-dir", type=Path, required=True)
+    ap.add_argument("--allow-real-input", action="store_true", help="Explicitly allow foreground-bound SendInput for this attended run.")
     a = ap.parse_args()
     project = a.project_root.resolve()
     out_dir = a.out_dir.resolve()
@@ -198,7 +298,17 @@ def main() -> int:
     manifest = out_dir / "manifest.jsonl"
     log = out_dir / "game_stdout.log"
     prev_focus = user32.GetForegroundWindow()
-    record = {"schema_version": "p3-slice-record-v1", "steps": [], "status": "failed"}
+    record = {"schema_version": "p3-slice-record-v3", "steps": [], "status": "failed", "real_input_authorized": a.allow_real_input}
+    if not a.allow_real_input:
+        record.update(status="input_disabled", error="real OS input requires --allow-real-input")
+        (out_dir / "interaction_record.json").write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(json.dumps({"status": record["status"], "steps": 0, "error": record["error"]}))
+        return 2
+    candidate = calculate_candidate_identity(project)
+    candidate_file = out_dir / "candidate_identity.json"
+    candidate_file.write_text(json.dumps(candidate, ensure_ascii=False, indent=2), encoding="utf-8")
+    transaction_id = f"TX-P3-{uuid.uuid4().hex[:12]}"
+    record.update(transaction_id=transaction_id, candidate_identity=candidate)
     game_pid = None
 
     game = subprocess.Popen([str(GODOT), "--path", str(project)], cwd=str(project),
@@ -209,18 +319,22 @@ def main() -> int:
         game_pid = win["pid"]
         hwnd = win["hwnd"]
         title = win["title"]
+        guard = RealInputGuard(hwnd=hwnd, game_pid=game_pid, console_pid=game.pid, allow_real_input=a.allow_real_input, parent_lookup=parent_of_pid)
         user32.SetForegroundWindow(hwnd)
         time.sleep(0.5)
+        guard.assert_ready()
+        tap("ENTER", guard)
+        time.sleep(1.0)
 
         def step(name: str, desc: str, **kw):
-            row = capture(game_pid, out_dir, name, "p3_slice", kw.get("state", name), kw.get("action", desc), manifest)
+            row = capture(game_pid, out_dir, name, "p3_slice", kw.get("state", name), kw.get("action", desc), manifest, transaction_id, candidate_file)
             record["steps"].append({"step": name, "desc": desc, "capture": row.get("output"), "sha256": row.get("sha256")})
             print(f"[P3] {name}: {row.get('output')}")
 
         time.sleep(3.0)
         step("first_screen_3s", "first screen readability at 3s", state="clean_launch_3s", action="idle")
-        hold_keys(["W"], 1.2)
-        hold_keys(["D"], 1.2)
+        hold_keys(["W"], 1.2, guard)
+        hold_keys(["D"], 1.2, guard)
         step("movement_feedback", "world scroll after real WASD holds", state="after_movement", action="real_wasd")
 
         m = wait_for_log_marker(log, "window opened phase=build_choice", 90.0)
@@ -228,7 +342,7 @@ def main() -> int:
         time.sleep(1.0)
         step("build_choice_3cards", "3-card build choice window", state="build_choice_inspection", action="await_real_key")
 
-        tap("2")
+        tap("2", guard)
         sel = wait_for_log_marker(log, "card selected idx=1 phase=build_choice source=keyboard", 10.0)
         record["steps"].append({"step": "real_keyboard_select_2", "log": sel})
         time.sleep(0.3)
@@ -241,7 +355,7 @@ def main() -> int:
         record["steps"].append({"step": "build_upgrade_open", "log": m2})
         time.sleep(1.0)
         step("build_upgrade_1card", "single-card rank upgrade window", state="build_upgrade_inspection", action="await_real_key")
-        tap("1")
+        tap("1", guard)
         sel2 = wait_for_log_marker(log, "card selected idx=0 phase=build_upgrade source=keyboard", 10.0)
         record["steps"].append({"step": "real_keyboard_select_1", "log": sel2})
         wait_for_log_marker(log, "window closed; combat resumed", 10.0)
@@ -257,16 +371,16 @@ def main() -> int:
             if opened <= closed:
                 break
             time.sleep(1.0)
-            tap("1")
+            tap("1", guard)
             try:
                 wait_for_log_marker(log, "window closed; combat resumed", 10.0)
             except RuntimeError:
                 break
 
-        tap("ESC")
+        tap("ESC", guard)
         time.sleep(0.6)
         step("pause_overlay", "ESC pause overlay", state="paused", action="real_esc")
-        tap("R")
+        tap("R", guard)
         rs = wait_for_log_marker(log, "TERMINAL-AUTO-RESTART] canonical reset", 10.0)
         record["steps"].append({"step": "real_r_restart", "log": rs})
         time.sleep(1.5)
@@ -275,6 +389,8 @@ def main() -> int:
         record["status"] = "passed"
         record["game_pid"] = game.pid
         record["window_title"] = title
+    except EnvironmentBlocked as error:
+        record.update(status="environment_blocked", error=str(error), environment=error.environment, input_cleanup=guard.cleanup_receipts)
     except Exception as e:
         record["error"] = str(e)
     finally:
@@ -286,13 +402,13 @@ def main() -> int:
             try:
                 game.wait(timeout=10)
             except subprocess.TimeoutExpired:
-                game.kill()
+                record.update(status="blocked", error="tool-owned game did not exit after WM_CLOSE; force kill disabled", unresponsive_pid=game.pid)
         if prev_focus:
             user32.SetForegroundWindow(prev_focus)
 
     (out_dir / "interaction_record.json").write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({"status": record["status"], "steps": len(record["steps"]), "error": record.get("error")}))
-    return 0 if record["status"] == "passed" else 1
+    return 0 if record["status"] == "passed" else 2
 
 if __name__ == "__main__":
     raise SystemExit(main())

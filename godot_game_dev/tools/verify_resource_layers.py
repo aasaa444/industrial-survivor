@@ -1,19 +1,55 @@
 #!/usr/bin/env python3
 """Report import -> loader -> parse layers for one Godot resource."""
 from __future__ import annotations
-import argparse, json, subprocess
+import argparse
+import json
 from pathlib import Path
 
-def run(cmd, cwd):
- r=subprocess.run(cmd,cwd=cwd,capture_output=True,text=True,encoding='utf-8',errors='replace');return {"exit":r.returncode,"stdout":r.stdout[-2000:],"stderr":r.stderr[-2000:]}
-def main():
- p=argparse.ArgumentParser();p.add_argument('--project-root',type=Path,default=Path.cwd());p.add_argument('--resource',required=True);p.add_argument('--godot',type=Path,required=True);p.add_argument('--dry-run',action='store_true');a=p.parse_args();root=a.project_root.resolve();res=root/a.resource
- out={"project_root":str(root),"resource":a.resource,"resource_exists":res.exists(),"import_sidecar_exists":Path(str(res)+'.import').exists(),"layers":{}}
- if a.dry_run: print(json.dumps(out,indent=2));return
- out['layers']['headless_import']=run([str(a.godot),'--headless','--import','--path',str(root)],root)
- out['layers']['parse']=run([str(a.godot),'--headless','--path',str(root),'--quit-after','3'],root)
- parse_text=out['layers']['parse']['stdout']+'\n'+out['layers']['parse']['stderr']
- out['parse_ok']='Parse Error' not in parse_text and 'SCRIPT ERROR' not in parse_text
- print(json.dumps(out,ensure_ascii=False,indent=2))
- raise SystemExit(0 if out['resource_exists'] and out['parse_ok'] else 2)
-if __name__=='__main__':main()
+from background_process import run
+
+
+def execute(command: list[str], cwd: Path, log_dir: Path, label: str) -> dict:
+    record = run("headless_godot", command, cwd, log_dir, label, quiet_host=True, timeout=120)
+    stdout = Path(record["stdout"]).read_text(encoding="utf-8", errors="replace")[-2000:]
+    stderr = Path(record["stderr"]).read_text(encoding="utf-8", errors="replace")[-2000:]
+    return {
+        "exit": record["exit_code"],
+        "status": record["status"],
+        "stdout": stdout,
+        "stderr": stderr,
+        "session_record": str(log_dir / f"{record['session_id']}.json"),
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--project-root", type=Path, default=Path.cwd())
+    parser.add_argument("--resource", required=True)
+    parser.add_argument("--godot", type=Path, required=True)
+    parser.add_argument("--log-dir", type=Path)
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
+    root = args.project_root.resolve()
+    resource = root / args.resource
+    log_dir = (args.log_dir or root / "qa" / "evidence" / "background-resource-layers").resolve()
+    result = {
+        "project_root": str(root),
+        "resource": args.resource,
+        "resource_exists": resource.exists(),
+        "import_sidecar_exists": Path(str(resource) + ".import").exists(),
+        "layers": {},
+        "evidence_boundary": "import/parse only; does not prove active scene loading, runtime interaction, visual pixels, or player experience",
+    }
+    if args.dry_run:
+        print(json.dumps(result, indent=2))
+        return 0
+    result["layers"]["headless_import"] = execute([str(args.godot), "--headless", "--import", "--path", str(root)], root, log_dir, "resource-import")
+    result["layers"]["parse"] = execute([str(args.godot), "--headless", "--path", str(root), "--quit-after", "3"], root, log_dir, "resource-parse")
+    parse_text = result["layers"]["parse"]["stdout"] + "\n" + result["layers"]["parse"]["stderr"]
+    result["parse_ok"] = "Parse Error" not in parse_text and "SCRIPT ERROR" not in parse_text and result["layers"]["parse"]["status"] == "passed"
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if result["resource_exists"] and result["parse_ok"] else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

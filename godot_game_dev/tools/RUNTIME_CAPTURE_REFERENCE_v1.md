@@ -7,7 +7,7 @@ QA 场景：`res://qa/qa_runtime_viewport_capture.tscn`
 
 ## 目的
 
-为跨表面功能提供一个不依赖桌面像素裁剪的内部状态/渲染证据层。首个场景是 Pulse：同一工件链路绑定 `pulse_flash_active`、Pulse 构筑、近身敌人、tick、viewport PNG 和候选 SHA。
+为跨表面功能提供一个不依赖桌面像素裁剪的内部状态/渲染证据层。当前 canonical 场景是 Arc Coil：同一工件链路绑定 `arc_coil_chain_active`、Arc Coil 构筑、hop 0/1 trace、VFX 节点、tick、viewport PNG 和完整候选身份。历史 Pulse 工件属于 `legacy_identity_partial`，不得用当前 Arc Coil validator 重新确认或推进严格 Slice gate。
 
 ## 不替代的证据层
 
@@ -48,7 +48,7 @@ python godot_game_dev/tools/runtime_capture.py \
 <output-dir>/manifest.json  checksum、身份和证据边界
 ```
 
-`state.json` 必须包含：capture/transaction ID、candidate SHA、scenario/state/action、progression/build/upgrade UI、alive enemies、camera、recent input、Pulse 时间和半径、证明边界。
+`state.json` 必须包含：capture/transaction ID、完整 candidate identity、scenario/state/action、progression/build/upgrade UI、alive enemies、camera、recent input、Arc Coil trace/VFX、证明边界。
 
 ## Paired Capture 合同
 
@@ -69,8 +69,8 @@ python godot_game_dev/tools/runtime_capture.py \
 | 类型 | 命令/场景 | 预期 |
 |---|---|---|
 | Dry-run | `--dry-run` | exit 0，无项目修改 |
-| Positive | `cap-pulse-002` | exit 0，state + viewport + manifest，Pulse/rank/enemy/tick 绑定 |
-| Negative: SHA | `--negative-fixture wrong-sha` | exit 2，`candidate_sha mismatch`，无 pass manifest |
+| Positive | Arc Coil paired QA capture | exit 0，state + viewport + manifest，Arc Coil/hop/VFX/tick 绑定 |
+| Negative: SHA | `--negative-fixture wrong-sha` | exit 2，candidate identity mismatch，no pass manifest |
 | Negative: missing | `--negative-fixture missing-artifact` | exit 2，无 artifact |
 | Render backend guard | headless Dummy renderer | QA scene显式失败 `viewport texture unavailable`，不得写 passed |
 
@@ -83,11 +83,11 @@ python godot_game_dev/tools/runtime_capture.py \
 | candidate SHA 不匹配 | Evidence identity failure | exit 2；重新生成，不复用工件 |
 | native window 不在前台 | Native capture safety guard | 原生 route 拒绝；不调用低级桌面裁剪作为证据 |
 | 外部窗口/错误应用像素 | Evidence contamination | 作废工件；重新走 paired route |
-| Pulse state active 但视觉不明显 | Visual QA gap | 保留 L2；M3 标记 partial，不能通过视觉验收 |
+| Arc Coil state active 但视觉不明显 | Visual QA gap | 保留 L2；标记 partial，不能通过视觉验收 |
 
 ## 重新验证触发器
 
 - Godot 版本、渲染器、OS 截图后端变化；
-- QA capture scene、启动层、Pulse VFX、viewport size 改动；
+- QA capture scene、启动层、Arc Coil VFX、viewport size 改动；
 - 窗口会话/所有权机制改动；
 - 发现错误应用画面或 metadata 不匹配。

@@ -1,0 +1,25 @@
+{
+  "schema_version": "slice-runtime-v1",
+  "slice_id": "SLICE-PILOT-LAUNCH-001",
+  "dispatch_count": 0,
+  "effective_repair_count": 0,
+  "no_progress_count": 2,
+  "fault_class": "Tooling",
+  "last_player_visible_delta": "none",
+  "history": [
+    {
+      "ts_utc": "2026-08-22T10:29:42Z",
+      "kind": "no_progress",
+      "fault_class": "Tooling",
+      "fingerprint": "runtime_capture_validate_missing_state_viewport",
+      "player_visible_delta": "none"
+    },
+    {
+      "ts_utc": "2026-08-22T10:31:50Z",
+      "kind": "no_progress",
+      "fault_class": "Tooling",
+      "fingerprint": "l3_native_capture_blocked_external_editor_and_write_risk_launch_route",
+      "player_visible_delta": "none"
+    }
+  ]
+}

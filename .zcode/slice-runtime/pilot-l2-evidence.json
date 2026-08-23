@@ -1,0 +1,14 @@
+{
+  "evidence_id": "E-SLICE-PILOT-L2-001",
+  "transaction_id": "TX-SLICE-PILOT-LAUNCH-001",
+  "level": "L2_runtime",
+  "route": "runtime_capture.py viewport QA-owned session",
+  "artifact_refs": [
+    "D:/Game/New_Game/godot_game_dev/qa/evidence/SLICE-PILOT-LAUNCH-001-L2/viewport.png",
+    "D:/Game/New_Game/godot_game_dev/qa/evidence/SLICE-PILOT-LAUNCH-001-L2/state.json",
+    "D:/Game/New_Game/godot_game_dev/qa/evidence/SLICE-PILOT-LAUNCH-001-L2/runtime.log",
+    "D:/Game/New_Game/godot_game_dev/qa/evidence/SLICE-PILOT-LAUNCH-001-L2/manifest.json"
+  ],
+  "proves": "Authoritative Pulse state and internal Godot viewport rendering on one QA-owned transaction.",
+  "does_not_prove": "Foreground native window pixels, desktop composition, generic launch readability, player experience, or user acceptance."
+}

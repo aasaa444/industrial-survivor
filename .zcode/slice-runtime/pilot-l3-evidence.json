@@ -1,0 +1,20 @@
+{
+  "evidence_id": "E-SLICE-PILOT-L3-001",
+  "transaction_id": "TX-SLICE-PILOT-LAUNCH-001",
+  "level": "L3_player_visual",
+  "route": "native_slice_session.py + capture_game_window.py tool-owned parent/child session",
+  "artifact_refs": [
+    "D:/Game/New_Game/godot_game_dev/qa/evidence/SLICE-PILOT-LAUNCH-001-L3/native_window.png",
+    "D:/Game/New_Game/godot_game_dev/qa/evidence/SLICE-PILOT-LAUNCH-001-L3/native_window.png.json",
+    "D:/Game/New_Game/godot_game_dev/qa/evidence/SLICE-PILOT-LAUNCH-001-L3/native_manifest.jsonl",
+    "D:/Game/New_Game/godot_game_dev/qa/evidence/SLICE-PILOT-LAUNCH-001-L3/session_result.json",
+    "D:/Game/New_Game/godot_game_dev/qa/evidence/SLICE-PILOT-LAUNCH-001-L3/session_runtime.log"
+  ],
+  "window_identity": {
+    "pid": 51852,
+    "title": "Industrial Survivor Demo (DEBUG)",
+    "rect": "696,345,1864,1032"
+  },
+  "proves": "A caller-owned native debug game window was foreground-captured, identified by PID/title/rect/SHA, then exited gracefully.",
+  "does_not_prove": "Authoritative Pulse state, complete player transaction, generic launch readability, player enjoyment, or user acceptance."
+}

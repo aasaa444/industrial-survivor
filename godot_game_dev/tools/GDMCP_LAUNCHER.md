@@ -24,7 +24,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\gdmcp.ps1 --json editor st
 
 All non-check arguments are passed transparently to the local executable. The wrapper records UTC timestamp, wrapper identity, project root, resolved executable, command (with credential-like argument values redacted), real stdout/stderr, temporary log paths, and child exit code. A non-zero child exit code remains non-zero at the wrapper boundary.
 
-GDMCP tokens must be supplied through the supported environment/configuration mechanisms; never put credentials in command lines or logs. The command audit redacts values whose argument text contains `token`, `secret`, `password`, `authorization`, `credential`, or `api-key`.
+GDMCP tokens must be supplied through supported environment/configuration mechanisms; do not pass credentials as CLI arguments. The wrapper/session audit redacts recognized sensitive argv values, but child stdout/stderr are retained as raw diagnostic evidence and therefore are not a credential transport channel.
 
 ## Failure modes
 

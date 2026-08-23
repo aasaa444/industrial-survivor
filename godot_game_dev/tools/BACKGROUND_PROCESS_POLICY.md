@@ -1,0 +1,11 @@
+# Background Process Policy
+
+`background_process.py` is the only route for non-interactive project subprocesses.
+
+Use it for project-local GDMCP CLI, headless Godot, gdUnit, import, parse, build, and CLI validation. It uses structured argv, hides only its own Windows console host, writes stdout/stderr/session records, preserves exit codes, and never kills a child process.
+
+Do not use it for foreground Godot windows, native L3 capture, `ImageGrab`, `SendInput`, real-player E2E, or any attended validation. Those routes remain visible and require their own safety contracts.
+
+`--show-host` is available only for debugging a background route. Normal project work should use the default quiet host behavior.
+
+If a command host still flashes after a project tool uses this launcher, the remaining window is likely created by the ZCode/Bash host itself. Current ZCode configuration exposes no verified Windows child-window visibility control; report that as a host limitation rather than weakening project evidence or foreground safety rules.

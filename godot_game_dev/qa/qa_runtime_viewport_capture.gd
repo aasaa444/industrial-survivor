@@ -1,6 +1,6 @@
 extends Node
 # QA-only state-bound viewport capture for CR-TOOLING-001.
-# It instantiates the real main scene, drives a deterministic Pulse moment through
+# It instantiates the real main scene, drives a deterministic Arc Coil moment through
 # the public command, records authoritative state, and saves the game's own viewport.
 # This proves state+rendering only; native-window evidence is produced separately.
 
@@ -9,15 +9,33 @@ const PROJECT_ROOT := "D:\\Game\\New_Game\\godot_game_dev"
 
 var main: Node
 var transaction_id: String = ""
-var candidate_sha: String = ""
+var candidate_identity: Dictionary = {}
+var candidate_identity_file: String = ""
+var capture_profile: String = "arc-coil"
 var output_dir: String = ""
 var failure: String = ""
 
 func _ready() -> void:
 	for a in OS.get_cmdline_user_args() + OS.get_cmdline_args():
 		if a.begins_with("--capture-tx="): transaction_id = a.trim_prefix("--capture-tx=")
-		elif a.begins_with("--capture-sha="): candidate_sha = a.trim_prefix("--capture-sha=")
+		elif a.begins_with("--capture-identity-file="): candidate_identity_file = a.trim_prefix("--capture-identity-file=")
+		elif a.begins_with("--capture-profile="): capture_profile = a.trim_prefix("--capture-profile=")
 		elif a.begins_with("--capture-out="): output_dir = a.trim_prefix("--capture-out=")
+	if candidate_identity_file == "":
+		_fail("candidate identity file missing")
+		_finish()
+		return
+	var identity_file := FileAccess.open(candidate_identity_file, FileAccess.READ)
+	if identity_file == null:
+		_fail("candidate identity file unreadable")
+		_finish()
+		return
+	var parsed_identity = JSON.parse_string(identity_file.get_as_text())
+	if not (parsed_identity is Dictionary) or str(parsed_identity.get("working_tree_sha256", "")) == "":
+		_fail("candidate identity invalid")
+		_finish()
+		return
+	candidate_identity = parsed_identity
 	if transaction_id == "": transaction_id = "capture-%d" % int(Time.get_unix_time_from_system())
 	if output_dir == "": output_dir = "res://qa/evidence/runtime_capture/%s" % transaction_id
 	call_deferred("_drive")
@@ -38,6 +56,10 @@ func _fail(reason: String) -> void:
 	print("[PAIRED-CAPTURE-FAIL] " + reason)
 
 func _drive() -> void:
+	if capture_profile != "arc-coil":
+		_fail("unsupported capture profile: %s" % capture_profile)
+		_finish()
+		return
 	main = MAIN_SCENE.instantiate()
 	get_tree().root.add_child(main)
 	await _wait(0.2)
@@ -89,7 +111,7 @@ func _write_artifacts() -> void:
 		"schema_version": "runtime-viewport-state-v1",
 		"capture_id": transaction_id + ":viewport",
 		"transaction_id": transaction_id,
-		"candidate_sha": candidate_sha,
+		"candidate_identity": candidate_identity,
 		"project_root": PROJECT_ROOT,
 		"scenario": "arc_coil_chain",
 		"state": "arc_coil_chain_active",

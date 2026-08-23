@@ -1,0 +1,11 @@
+[
+  {
+    "id": "PU-LAUNCH-RESET",
+    "action": "Launch the current project and observe its first stable player-visible frame.",
+    "state_owner": "existing runtime startup path",
+    "effect": "The project reaches its current launch state without a parse/start failure.",
+    "feedback": "A native game window and runtime capture artifact are available.",
+    "pressure": "This pilot does not claim gameplay pressure; it validates the evidence route only.",
+    "terminal_or_reset": "The tool-owned validation session exits gracefully and can be launched again."
+  }
+]

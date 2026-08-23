@@ -1,0 +1,10 @@
+{
+  "schema_version": "slice-runtime-v1",
+  "slice_id": "SLICE-PILOT-PAIRED-001",
+  "dispatch_count": 0,
+  "effective_repair_count": 0,
+  "no_progress_count": 0,
+  "fault_class": null,
+  "last_player_visible_delta": null,
+  "history": []
+}

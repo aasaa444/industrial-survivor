@@ -1,0 +1,47 @@
+{
+  "schema_version": "slice-runtime-v1",
+  "transitions": {
+    "scoped": [
+      "blocked",
+      "building",
+      "paused"
+    ],
+    "building": [
+      "blocked",
+      "mechanically_verified",
+      "paused"
+    ],
+    "mechanically_verified": [
+      "blocked",
+      "paused",
+      "player_evaluated",
+      "remediation_required"
+    ],
+    "player_evaluated": [
+      "blocked",
+      "paused",
+      "remediation_required",
+      "user_acceptance_pending"
+    ],
+    "user_acceptance_pending": [
+      "accepted",
+      "blocked",
+      "paused",
+      "remediation_required"
+    ],
+    "remediation_required": [
+      "blocked",
+      "building",
+      "paused"
+    ],
+    "blocked": [
+      "building",
+      "paused",
+      "scoped"
+    ],
+    "paused": [
+      "scoped"
+    ],
+    "accepted": []
+  }
+}

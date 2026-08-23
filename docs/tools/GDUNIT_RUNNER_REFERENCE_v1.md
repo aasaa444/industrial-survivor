@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`tools/run_gdunit4.ps1` runs the fixed 60-case rules/Adapter suite. It is a Toolchain L1 runner, not a UI, input, runtime, visual, or player-experience acceptance tool.
+`tools/run_gdunit4.ps1` runs the fixed rules/Adapter suite selected by its explicit test list. It is a Toolchain L1 runner, not a UI, input, runtime, visual, or player-experience acceptance tool.
 
 ## Invocation
 
@@ -17,17 +17,17 @@ All are required:
 
 ```text
 exit 0
-Overall Summary: ...60 test cases
-Executed test cases: (60/60)
-SUITE_OK_60_OF_60
+Overall Summary: <zero errors and failures>
+Executed test cases: (N/N), where N is the current explicit suite total and N >= 1
+SUITE_OK_N_OF_N
 ```
 
 ## Failure Contract
 
 - Missing Godot/project/runner exits 2 with explicit path.
 - Nonzero runner exit prints stdout/stderr paths.
-- Missing expected summary now prints stdout/stderr paths (the old undefined `$log` error was repaired 2026-08-21).
-- Timeout currently kills only the direct runner process; process-tree/port release is a known limitation and belongs to future TOOL-LEASE integration.
+- Timeout returns blocked/124 with a session record, owned child PID, stdout/stderr paths, and reconcile status; force-kill is disabled.
+- Missing expected summary prints stdout/stderr paths and the session record.
 
 ## Evidence Boundary
 

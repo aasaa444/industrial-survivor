@@ -1,0 +1,11 @@
+[
+  {
+    "id": "PU-PAIRED-CAPTURE",
+    "action": "Run the QA-owned Pulse capture scene and capture its tool-owned native debug window within the same transaction.",
+    "state_owner": "qa_runtime_viewport_capture scene and existing Pulse runtime state",
+    "effect": "The capture scene reaches pulse_flash_active with a pulse build and nearby enemy while producing state.json and viewport.png.",
+    "feedback": "The same transaction yields an identity-bearing native debug window capture with PID/title/rect/SHA.",
+    "pressure": "This is an evidence-route Slice; it does not claim player pressure or game quality.",
+    "terminal_or_reset": "The QA-owned Godot session exits gracefully after capture."
+  }
+]
