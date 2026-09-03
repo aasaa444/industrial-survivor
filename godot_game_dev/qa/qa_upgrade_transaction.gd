@@ -19,7 +19,7 @@ extends Node
 const MAIN_SCENE := preload("res://scenes/main.tscn")
 
 const PROJECT_ROOT := "D:\\Game\\New_Game\\godot_game_dev"
-const CONTRACT_ID := "upgrade_build_v1"
+const CONTRACT_ID := "weapon_catalog_m4_v1"
 const STEP_IDS := ["trigger", "mutate", "read_model", "behavior", "feedback", "reset"]
 
 var main: Node
@@ -144,6 +144,8 @@ func _drive() -> void:
 	print("[QA-TX] boot branch=%s sha=%s digest=%s" % [branch, tx_sha, tx_digest])
 	main = MAIN_SCENE.instantiate()
 	get_tree().root.add_child(main)
+	# M1 start screen owns the initial pause; QA enters through the real start transaction.
+	main._start_game()
 	# Grace phase is presentation-only; energy collection starts after it ends.
 	await _wait(1.4)
 
@@ -260,14 +262,14 @@ func _drive_choice() -> void:
 	await _wait_frames(2)
 	_observing = false
 	var build: Dictionary = main.build_state
-	if String(build.get("active_build", "")) != "pierce" or int(build.get("rank", 0)) != 1 or not bool(build.get("enabled", {}).get("pierce", false)):
-		_fail("behavior: build_state after choose = %s" % JSON.stringify(build))
+	if String(build.get("weapon_id", "")) != "rail_pierce" or String(build.get("active_build", "")) != "pierce" or int(build.get("rank", 0)) != 1 or not bool(build.get("enabled", {}).get("pierce", false)):
+		_fail("behavior: catalog-backed build_state after choose = %s" % JSON.stringify(build))
 		return
 	var max_targets: int = int(main.session.rules_state.get("attack_max_targets", 1))
 	if max_targets != 3:
 		_fail("behavior: rules attack_max_targets=%d expected 3" % max_targets)
 		return
-	_row("behavior", "choose_upgrade_0_qa_pierce_rank1", {"active_build": ["", "pierce"], "rank": [0, 1], "attack_max_targets": [1, max_targets]},
+	_row("behavior", "choose_upgrade_0_qa_rail_pierce_rank1", {"weapon_id": ["", "rail_pierce"], "active_build": ["", "pierce"], "rank": [0, 1], "attack_max_targets": [1, max_targets]},
 		["[B2-UPGRADE] applied phase=pierce"], ["stdout log of this run"])
 
 	var sel_count: int = int(_transitions.get("2->3", 0))
@@ -299,8 +301,8 @@ func _drive_upgrade() -> void:
 	if not await _wait_until(func(): return not _pending(), 8.0):
 		_fail("setup: window did not close")
 		return
-	if String(main.build_state.get("active_build", "")) != "fan" or int(main.build_state.get("rank", 0)) != 1:
-		_fail("setup: fan rank1 not established: %s" % JSON.stringify(main.build_state))
+	if String(main.build_state.get("weapon_id", "")) != "scatter_fan" or String(main.build_state.get("active_build", "")) != "fan" or int(main.build_state.get("rank", 0)) != 1:
+		_fail("setup: catalog-backed fan rank1 not established: %s" % JSON.stringify(main.build_state))
 		return
 
 	# Step 1 trigger: one more core collected exactly once.
@@ -360,10 +362,14 @@ func _drive_upgrade() -> void:
 	await _wait_frames(2)
 	_observing = false
 	var build: Dictionary = main.build_state
-	if String(build.get("active_build", "")) != "fan" or int(build.get("rank", 0)) != 2:
-		_fail("behavior: fan rank2 not reached: %s" % JSON.stringify(build))
+	if String(build.get("weapon_id", "")) != "scatter_fan" or String(build.get("active_build", "")) != "fan" or int(build.get("rank", 0)) != 2:
+		_fail("behavior: catalog-backed fan rank2 not reached: %s" % JSON.stringify(build))
 		return
-	_row("behavior", "choose_upgrade_0_qa_fan_rank2", {"rank": [1, 2], "fan_arcs_stay": 3},
+	var max_targets: int = int(main.session.rules_state.get("attack_max_targets", 0))
+	if max_targets != 5:
+		_fail("behavior: fan rank2 attack_max_targets=%d expected 5" % max_targets)
+		return
+	_row("behavior", "choose_upgrade_0_qa_scatter_fan_rank2", {"weapon_id": ["scatter_fan", "scatter_fan"], "rank": [1, 2], "attack_max_targets": [4, max_targets], "fan_arcs_stay": 3},
 		["[B2-UPGRADE] applied phase=fan"], ["stdout log of this run"])
 
 	var sel_count: int = int(_transitions.get("2->3", 0))
@@ -391,8 +397,8 @@ func _reset_step(_unused: Array) -> void:
 	if int(prog.get("xp", -1)) != 0 or int(prog.get("level", 0)) != 1:
 		_fail("reset: progression not cleared: %s" % JSON.stringify(prog))
 		return
-	if String(build.get("active_build", "x")) != "" or int(build.get("rank", -1)) != 0:
-		_fail("reset: build not cleared: %s" % JSON.stringify(build))
+	if String(build.get("weapon_id", "x")) != "" or String(build.get("active_build", "x")) != "" or int(build.get("rank", -1)) != 0:
+		_fail("reset: catalog-backed build not cleared: %s" % JSON.stringify(build))
 		return
 	var enabled: Dictionary = build.get("enabled", {})
 	if bool(enabled.get("pierce", true)) or bool(enabled.get("fan", true)) or bool(enabled.get("pulse", true)):

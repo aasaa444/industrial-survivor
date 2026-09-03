@@ -949,3 +949,46 @@ func test_terminal_absent_preserves_existing_semantics() -> void:
 		if e["type"] == "terminal_event" or e["type"] == "reset_event":
 			has_terminal = true
 	assert_bool(has_terminal).is_false()
+
+func test_arc_chain_trace_is_ordered_and_source_linked() -> void:
+	var state := RULES.empty_state()
+	var refresh: Dictionary = RULES.step({"task": "refresh_fire", "live_candidates": [
+		{"stable_id": 30, "k1_bucket": 2, "k2_bucket": 0, "alive": true, "hp": 2},
+		{"stable_id": 10, "k1_bucket": 0, "k2_bucket": 0, "alive": true, "hp": 2},
+		{"stable_id": 20, "k1_bucket": 1, "k2_bucket": 0, "alive": true, "hp": 2},
+	]}, state, 10)
+	var resolve: Dictionary = RULES.step({"task": "resolve", "attack_delivery": "arc_chain", "attack_max_targets": 3}, refresh["state"], 11)
+	var trace: Array = []
+	for event in resolve["events"]:
+		if event.get("type", "") == "resolution_outcome" and event.get("delivery", "") == "arc_chain":
+			trace.append(event)
+	assert_int(trace.size()).is_equal(3)
+	assert_int(int(trace[0]["id"])).is_equal(10)
+	assert_int(int(trace[0]["hop"])).is_equal(0)
+	assert_int(int(trace[0]["source_id"])).is_equal(-1)
+	assert_int(int(trace[1]["id"])).is_equal(20)
+	assert_int(int(trace[1]["hop"])).is_equal(1)
+	assert_int(int(trace[1]["source_id"])).is_equal(10)
+	assert_int(int(trace[2]["source_id"])).is_equal(20)
+
+
+func test_arc_chain_invalid_first_hop_terminates_the_chain() -> void:
+	var state := RULES.empty_state()
+	state["target_snapshot_ids"] = [1, 2, 3]
+	state["invalidation_log"] = [{"id": 1, "tick": 9}]
+	var result: Dictionary = RULES.step({"task": "resolve", "attack_delivery": "arc_chain", "attack_max_targets": 3}, state, 10)
+	assert_bool(result["state"]["hit_results"].is_empty()).is_true()
+	var trace_count := 0
+	for event in result["events"]:
+		if event.get("delivery", "") == "arc_chain":
+			trace_count += 1
+	assert_int(trace_count).is_equal(0)
+
+
+func test_direct_delivery_does_not_emit_arc_trace() -> void:
+	var state := RULES.empty_state()
+	state["target_snapshot_ids"] = [1]
+	state["live_candidates"] = [{"stable_id": 1, "k1_bucket": 0, "k2_bucket": 0, "alive": true, "hp": 2}]
+	var result: Dictionary = RULES.step({"task": "resolve", "attack_delivery": "direct", "attack_max_targets": 1}, state, 10)
+	for event in result["events"]:
+		assert_bool(not event.has("delivery")).is_true()

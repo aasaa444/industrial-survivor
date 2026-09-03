@@ -418,9 +418,13 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 		diagnostics["steps"].append("upgrade_select")
 		var selected_card_id: int = int(envelope.get("selected_card_id", -1))
 		var phase: String = String(envelope.get("b2_phase", state.get("b2_phase", "pre")))
-		# Apply upgrade effects based on phase and selected card.
-		if phase == "pierce":
+		# Apply the catalog-resolved target count when supplied; retain B2 defaults for legacy fixtures.
+		var catalog_max_targets: int = int(envelope.get("attack_max_targets", -1))
+		if catalog_max_targets >= 1:
+			state["attack_max_targets"] = catalog_max_targets
+		elif phase == "pierce":
 			state["attack_max_targets"] = 3
+		if phase == "pierce":
 			state["b2_phase"] = "pierce"
 		elif phase == "fan":
 			state["attack_fan_arcs"] = 3
@@ -443,7 +447,14 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 		diagnostics["reset_epoch"] = int(state.get("reset_epoch", 0))
 		return {"state": state, "events": events, "diagnostics": diagnostics}
 
-	# [a] Named drain point: drain invalidation/removal domain events at the start of this step's resolution boundary.
+		if task == "none":
+			diagnostics["steps"].append("none")
+			if envelope.has("live_candidates"):
+				state["live_candidates"] = _clone_input(envelope["live_candidates"])
+
+		# [a] Named drain point: drain invalidation/removal domain events at the start of this step's resolution boundary.
+
+
 	for rid in envelope.get("removed_ids", []):
 		var r: int = int(rid)
 		state["invalidation_log"].append({"id": r, "tick": tick})
@@ -509,18 +520,32 @@ static func step(envelope: Dictionary, prior_state: Dictionary, tick: int) -> Di
 		var outcomes: Dictionary = {}
 		var killed: Dictionary = {}
 		var hit_count: int = 0
+		var attack_delivery := String(envelope.get("attack_delivery", "direct"))
+		if attack_delivery != "arc_chain":
+			attack_delivery = "direct"
+		var arc_chain_started := false
+		var previous_arc_id: int = -1
 		for sid_raw in state.get("target_snapshot_ids", []):
 			var sid: int = int(sid_raw)
 			if invalid.has(sid):
 				outcomes[sid] = "no-hit-invalid"
 				events.append({"type": "resolution_outcome", "id": sid, "outcome": "no-hit-invalid", "tick": tick})
+				if attack_delivery == "arc_chain" and not arc_chain_started:
+					break  # an invalid first hop terminates the chain; no live re-query or phantom source
 				continue   # invalid targets do not consume a hit slot
 			if hit_count >= attack_max_targets:
 				break
 			outcomes[sid] = "hit"
 			hit_map[sid] = true
 			hit_count += 1
-			events.append({"type": "resolution_outcome", "id": sid, "outcome": "hit", "tick": tick})
+			var hit_event := {"type": "resolution_outcome", "id": sid, "outcome": "hit", "tick": tick}
+			if attack_delivery == "arc_chain":
+				hit_event["delivery"] = "arc_chain"
+				hit_event["hop"] = hit_count - 1
+				hit_event["source_id"] = previous_arc_id
+				arc_chain_started = true
+				previous_arc_id = sid
+			events.append(hit_event)
 			# [kill path] Apply single-hit damage to the live candidate, record death when hp <= 0.
 			var cand: Dictionary = _find_candidate(state["live_candidates"], sid)
 			if not cand.is_empty():

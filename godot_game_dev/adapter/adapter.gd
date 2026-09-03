@@ -140,7 +140,8 @@ static func make_envelope(
 	contact_damage: int = 1,
 	terminal_input: Dictionary = {},
 	selected_card_id: int = -1,
-	attack_max_targets: int = -1
+	attack_max_targets: int = -1,
+	attack_delivery: String = "direct"
 ) -> Dictionary:
 	var env: Dictionary = {
 		"task": task,
@@ -166,6 +167,7 @@ static func make_envelope(
 	# B4: attack_max_targets envelope override for backward-compatible test fixtures (default -1 = use state value).
 	if attack_max_targets >= 0:
 		env["attack_max_targets"] = attack_max_targets
+	env["attack_delivery"] = attack_delivery if attack_delivery == "arc_chain" else "direct"
 	return env
 
 
@@ -188,6 +190,7 @@ static func feedback_from_result(result: Dictionary) -> Dictionary:
 		"lock_target": [],
 		"hit": [],
 		"kill": [],
+		"hit_trace": [],
 		"no_target": false,
 	}
 	# Lock indicator only when a non-empty snapshot was actually locked.
@@ -196,7 +199,11 @@ static func feedback_from_result(result: Dictionary) -> Dictionary:
 	# Hit feedback strictly bound to hit_results.
 	for id_raw in hit_results:
 		feedback["hit"].append(int(id_raw))
-	# Kill feedback strictly bound to kill_outcomes (a real death event).
+	# Arc chain trace is bound strictly to ordered rules events; adapter does not infer hops.
+	for event in result.get("events", []):
+		if String(event.get("type", "")) == "resolution_outcome" and String(event.get("outcome", "")) == "hit" and String(event.get("delivery", "")) == "arc_chain":
+			feedback["hit_trace"].append({"id": int(event.get("id", -1)), "hop": int(event.get("hop", -1)), "source_id": int(event.get("source_id", -1))})
+	# Kill feedback strictly bound to kill_outcomes.
 	for id_raw in kill_outcomes:
 		feedback["kill"].append(int(id_raw))
 	# Quiet no-target cue only for an empty shot (no fabricated lock/hit).

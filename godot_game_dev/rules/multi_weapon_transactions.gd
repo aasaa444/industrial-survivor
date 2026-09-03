@@ -138,7 +138,14 @@ static func resolve_attack(state: Dictionary, attack_id: String, tick: int, live
 
 	attack["resolved"] = true
 	next["attacks"][attack_id] = attack
-	return {"accepted": true, "state": next, "attack": attack, "events": events}
+	var projected_candidates: Array = []
+	for raw in live_candidates:
+		var stable_id: int = int(raw.get("stable_id", -1))
+		var projected_candidate: Dictionary = raw.duplicate(true)
+		if live_by_id.has(stable_id):
+			projected_candidate = live_by_id[stable_id].duplicate(true)
+		projected_candidates.append(projected_candidate)
+	return {"accepted": true, "state": next, "attack": attack, "events": events, "live_candidates": projected_candidates}
 
 static func reset(state: Dictionary, run_id: int) -> Dictionary:
 	var next := empty_state(run_id)

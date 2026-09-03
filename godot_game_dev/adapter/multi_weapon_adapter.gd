@@ -35,12 +35,12 @@ static func feedback_from_events(events: Array) -> Dictionary:
 	for raw in events:
 		var event: Dictionary = raw
 		var identity := {
-			"attack_id": String(event.get("attack_id", "")),
-			"slot_id": String(event.get("slot_id", "")),
-			"weapon_id": String(event.get("weapon_id", "")),
+			"attack_id": str(event.get("attack_id", "")),
+			"slot_id": str(event.get("slot_id", "")),
+			"weapon_id": str(event.get("weapon_id", "")),
 			"rank": int(event.get("rank", 1)),
 		}
-		var event_type := String(event.get("type", ""))
+		var event_type := str(event.get("type", ""))
 		if event_type == "attack_refresh":
 			var lock := identity.duplicate(true)
 			lock["target_snapshot_ids"] = event.get("target_snapshot_ids", []).duplicate(true)
@@ -48,7 +48,7 @@ static func feedback_from_events(events: Array) -> Dictionary:
 		elif event_type == "resolution_outcome":
 			var outcome := identity.duplicate(true)
 			outcome["id"] = int(event.get("id", -1))
-			outcome["outcome"] = String(event.get("outcome", ""))
+			outcome["outcome"] = str(event.get("outcome", ""))
 			if outcome["outcome"] == "hit":
 				feedback["hit"].append(outcome)
 				if event.has("hop"):

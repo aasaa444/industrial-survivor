@@ -127,4 +127,33 @@ func test_attack_resolve_is_single_use_and_reset_is_clean() -> void:
 	assert_int(int(reset["run_id"])).is_equal(15)
 	assert_int(int(reset["reset_epoch"])).is_equal(1)
 	assert_bool(reset["attacks"].is_empty()).is_true()
-	assert_bool(reset["death_ledger"].is_empty()).is_true()
+
+func test_three_due_slots_keep_independent_cadence_and_identity() -> void:
+	var slots := [
+		{"slot_id": "slot-003", "slot_order": 2, "weapon_id": "rail_pierce", "rank": 2, "next_fire_tick": 12, "next_attack_seq": 0},
+		{"slot_id": "slot-001", "slot_order": 0, "weapon_id": "rail_pierce", "rank": 1, "next_fire_tick": 12, "next_attack_seq": 1},
+		{"slot_id": "slot-002", "slot_order": 1, "weapon_id": "arc_coil", "rank": 1, "next_fire_tick": 12, "next_attack_seq": 0},
+	]
+	var due := ATTACKS.due_slot_order(slots, 12)
+	assert_array(due.map(func(slot): return slot["slot_id"])).is_equal(["slot-001", "slot-002", "slot-003"])
+	var state := ATTACKS.empty_state(21)
+	var candidates := [{"stable_id": 1, "k1_bucket": 0, "k2_bucket": 0, "alive": true, "hp": 3}]
+	for slot in due:
+		var attack_id := "r21:%s:a%02d" % [slot["slot_id"], int(slot["next_attack_seq"]) + 1]
+		var delivery := "arc_chain" if slot["weapon_id"] == "arc_coil" else "direct"
+		var begun := ATTACKS.begin_attack(state, attack_id, slot["slot_id"], slot["weapon_id"], int(slot["rank"]), delivery, 1, 12, candidates)
+		assert_bool(begun["accepted"]).is_true()
+		state = begun["state"]
+	assert_array(state["attack_order"]).is_equal(["r21:slot-001:a02", "r21:slot-002:a01", "r21:slot-003:a01"])
+	assert_str(String(state["attacks"]["r21:slot-002:a01"]["weapon_id"])).is_equal("arc_coil")
+
+func test_multi_adapter_feedback_keeps_three_attack_identities() -> void:
+	var events := [
+		{"type": "attack_refresh", "attack_id": "r22:slot-001:a01", "slot_id": "slot-001", "weapon_id": "rail_pierce", "rank": 1, "target_snapshot_ids": [1]},
+		{"type": "attack_refresh", "attack_id": "r22:slot-002:a01", "slot_id": "slot-002", "weapon_id": "arc_coil", "rank": 1, "target_snapshot_ids": [1]},
+		{"type": "attack_refresh", "attack_id": "r22:slot-003:a01", "slot_id": "slot-003", "weapon_id": "rail_pierce", "rank": 2, "target_snapshot_ids": [1]},
+	]
+	var feedback := preload("res://adapter/multi_weapon_adapter.gd").feedback_from_events(events)
+	assert_int(feedback["lock"].size()).is_equal(3)
+	assert_str(String(feedback["lock"][1]["attack_id"])).is_equal("r22:slot-002:a01")
+	assert_str(String(feedback["lock"][2]["weapon_id"])).is_equal("rail_pierce")

@@ -337,3 +337,23 @@ func test_terminal_feedback_empty_when_no_terminal_event() -> void:
 	assert_str(String(fb["outcome"])).is_equal("")
 	assert_bool(fb["reset_fired"]).is_false()
 	assert_int(int(fb["reset_epoch"])).is_equal(-1)
+
+func test_arc_chain_feedback_is_event_ordered_and_not_inferred() -> void:
+	var result: Dictionary = {
+		"state": {"target_snapshot_ids": [1, 2], "hit_results": {1: true, 2: true}, "kill_outcomes": {}, "no_target_branch": false},
+		"events": [
+			{"type": "resolution_outcome", "id": 1, "outcome": "hit", "delivery": "arc_chain", "hop": 0, "source_id": -1},
+			{"type": "resolution_outcome", "id": 2, "outcome": "hit", "delivery": "arc_chain", "hop": 1, "source_id": 1},
+		],
+	}
+	var feedback: Dictionary = ADAPTER.feedback_from_result(result)
+	assert_array(feedback["hit_trace"]).is_equal([
+		{"id": 1, "hop": 0, "source_id": -1},
+		{"id": 2, "hop": 1, "source_id": 1},
+	])
+
+
+func test_direct_hit_feedback_has_no_arc_trace() -> void:
+	var result: Dictionary = {"state": {"target_snapshot_ids": [1], "hit_results": {1: true}, "kill_outcomes": {}, "no_target_branch": false}, "events": [{"type": "resolution_outcome", "id": 1, "outcome": "hit"}]}
+	var feedback: Dictionary = ADAPTER.feedback_from_result(result)
+	assert_array(feedback["hit_trace"]).is_empty()
